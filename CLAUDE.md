@@ -9,7 +9,7 @@ A macOS menu bar app (AppKit + SwiftUI, macOS 26+, Swift 6 language mode) that s
   - `Models.swift`: `ProviderSnapshot` (`primary` is the five-hour figure, `secondary` the week), `UsageWindow`, `ProviderError` (Spanish messages; `needsUser` errors are not auto-retried).
   - `Pace.swift`, `History.swift` (`HistoryLog`, `AlertTracker`), `Formatting.swift` (`Fmt`, Spanish formats), `Demo.swift` (`--demo` data).
 - `Sources/TokenAnxiety`: the app. `UsageStore` polls the providers, `StatusItemController` + `MenuBarRenderer` draw the status item, `PanelController` hosts `PanelView` in a borderless `NSGlassEffectView` panel, `Views/SettingsView` is the settings window.
-- `scripts/build-app.sh` assembles and ad-hoc signs `build/Token Anxiety.app` (`--open [args]`, `--install`, `CONFIG=debug`). `scripts/make-icon.swift` draws the icon.
+- `scripts/build-app.sh` assembles and ad-hoc signs `build/Token Anxiety.app` (`--open [args]`, `--install`, `CONFIG=debug`). `scripts/make-icon.swift` draws the icon. `scripts/backdrop.swift` puts a plain gradient behind the panel for screenshots.
 
 ## Commands
 
@@ -26,4 +26,6 @@ A macOS menu bar app (AppKit + SwiftUI, macOS 26+, Swift 6 language mode) that s
 
 ## Checking the UI
 
-`screencapture -l <windowID>` renders glass windows blank; capture a screen region with `screencapture -R x,y,w,h` instead (window bounds from `CGWindowListCopyWindowInfo`). The panel closes on any click outside it, so capture right after `--open-panel`.
+`screencapture -l <windowID>` renders glass windows blank; capture a screen region with `screencapture -R x,y,w,h` instead (window bounds from `CGWindowListCopyWindowInfo`). The panel closes on any click outside it, so capture right after `--open-panel`. A Settings window opened from the background stays behind the frontmost app; it is not glass, so `-l` captures it.
+
+README screenshots (`docs/panel-dark.png`, `docs/panel-light.png`): `--demo --open-panel` over `scripts/backdrop.swift dark|light`, captured from y=0 to the panel's bottom, with the other apps' status items in the strip painted over. macOS 26 takes the menu bar's appearance from the wallpaper, not from light/dark mode: on this Mac the status item stays white in light mode, like the system's own items.

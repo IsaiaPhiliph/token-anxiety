@@ -1,7 +1,18 @@
-import Foundation
+import AppKit
 import ServiceManagement
 import TokenAnxietyCore
 import UserNotifications
+
+/// What macOS lets the app's notifications do.
+enum NotificationAccess {
+    case allowed
+    /// Allowed without "Desktop" (alert style none): they only reach Notification Center.
+    case quiet
+    case denied
+    case notAsked
+    /// `swift run`, without a bundle.
+    case unavailable
+}
 
 /// Posts the alert tracker's events as macOS notifications.
 @MainActor
@@ -18,6 +29,32 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
 
     func requestAuthorization() {
         center?.requestAuthorization(options: [.alert, .sound]) { _, _ in }
+    }
+
+    func access() async -> NotificationAccess {
+        guard let center else { return .unavailable }
+        let settings = await center.notificationSettings()
+        switch settings.authorizationStatus {
+        case .notDetermined: return .notAsked
+        case .denied: return .denied
+        default:
+            let onScreen = settings.alertStyle != UNAlertStyle.none && settings.alertSetting != .disabled
+            return onScreen ? .allowed : .quiet
+        }
+    }
+
+    /// Shows macOS's permission prompt if it was never answered.
+    func requestAccess() async -> NotificationAccess {
+        _ = try? await center?.requestAuthorization(options: [.alert, .sound])
+        return await access()
+    }
+
+    /// System Settings › Notifications › Token Anxiety.
+    func openSystemSettings() {
+        let id = Bundle.main.bundleIdentifier ?? ""
+        if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension?id=\(id)") {
+            NSWorkspace.shared.open(url)
+        }
     }
 
     func post(_ events: [AlertTracker.Event]) {

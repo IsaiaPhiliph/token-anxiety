@@ -10,6 +10,7 @@ struct SettingsView: View {
     @State private var launchAtLogin = LoginItem.isEnabled
     @State private var loginStatus = LoginItem.status
     @State private var loginError: String?
+    @State private var notificationAccess: NotificationAccess?
 
     var body: some View {
         Form {
@@ -49,8 +50,22 @@ struct SettingsView: View {
             Section("Avisos") {
                 Toggle("Avisarme al acercarme al límite", isOn: $settings.notificationsEnabled)
                     .onChange(of: settings.notificationsEnabled) { _, enabled in
-                        if enabled { notifier.requestAuthorization() }
+                        if enabled { Task { notificationAccess = await notifier.requestAccess() } }
                     }
+                if settings.notificationsEnabled, let access = notificationAccess, let problem = access.problem {
+                    HStack {
+                        Label(problem, systemImage: "exclamationmark.triangle.fill")
+                            .symbolRenderingMode(.multicolor)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        if access == .notAsked {
+                            Button("Dar permiso") { Task { notificationAccess = await notifier.requestAccess() } }
+                        } else {
+                            Button("Abrir") { notifier.openSystemSettings() }
+                        }
+                    }
+                }
                 Stepper(value: $settings.warnThreshold, in: 50...95, step: 5) {
                     LabeledContent("Primer aviso", value: Fmt.percent(Double(settings.warnThreshold)))
                 }
@@ -131,7 +146,24 @@ struct SettingsView: View {
             loginStatus = LoginItem.status
             launchAtLogin = LoginItem.isEnabled
         }
+        .task { notificationAccess = await notifier.access() }
+        // Back from System Settings, where the user may have changed it.
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            Task { notificationAccess = await notifier.access() }
+        }
         .environment(\.locale, Fmt.locale)
+    }
+}
+
+private extension NotificationAccess {
+    /// Why the alerts would not show up; nil when they do.
+    var problem: String? {
+        switch self {
+        case .denied: "macOS tiene bloqueados los avisos de Token Anxiety: activa «Permitir notificaciones»."
+        case .quiet: "Los avisos no salen en pantalla: marca «Escritorio» en sus notificaciones."
+        case .notAsked: "Falta darle permiso a la app para avisarte."
+        case .allowed, .unavailable: nil
+        }
     }
 }
 

@@ -1,8 +1,17 @@
 # Token Anxiety
 
+<img src="Resources/AppIcon.png" width="112" align="right" alt="Icono de Token Anxiety">
+
 App de la barra de menús de macOS que enseña cuánto llevas gastado de tus planes de IA: la ventana de 5 horas y la semanal de cada servicio, siempre a la vista. Al pinchar se abre un panel de Liquid Glass con el detalle: cuándo se renueva cada ventana, a qué ritmo gastas, los límites por modelo y una gráfica de los últimos 7 días.
 
-![Icono](Resources/AppIcon.png)
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/panel-dark.png">
+    <img src="docs/panel-light.png" width="340" alt="El icono de Token Anxiety en la barra de menús y su panel abierto debajo, con datos de ejemplo">
+  </picture>
+  <br>
+  <sub>Con los datos de ejemplo de <code>--demo</code>.</sub>
+</p>
 
 ## Qué mide
 
@@ -42,7 +51,7 @@ swift test                                                      # tests de los l
 "build/Token Anxiety.app/Contents/MacOS/TokenAnxiety" --print --debug   # diagnóstico en la terminal
 ```
 
-`--print` pregunta una vez a cada servicio y escribe las cifras (nunca tokens ni correos); `--debug` añade cada paso. El icono se regenera con `swift scripts/make-icon.swift Resources`.
+`--print` pregunta una vez a cada servicio y escribe las cifras (nunca tokens ni correos); `--debug` añade cada paso. El icono se regenera con `swift scripts/make-icon.swift Resources`. Las capturas de `docs/` salen de `--demo --open-panel` con `swift scripts/backdrop.swift` detrás, un fondo liso para que no se vea nada tuyo a través del cristal.
 
 ## Privacidad
 
@@ -54,4 +63,5 @@ swift test                                                      # tests de los l
 
 - **Claude: «ya no puede renovar su sesión»**: la sesión guardada de Claude Code ya no es válida. Abre `claude` en una terminal y haz `/login`; a partir de ahí la app la mantiene viva.
 - **Antigravity: «Abre Antigravity»**: solo da su cuota con la app abierta.
+- **No llegan los avisos**: en Ajustes › Avisos sale una línea si macOS los tiene bloqueados o no los saca en pantalla, con un botón que lleva directo a sus ajustes. «Probar un aviso» enseña cómo se ven.
 - Estos servicios no tienen una API de uso pública: si alguno cambia su formato, ese servicio saldrá con un aviso hasta adaptarlo, sin afectar a los demás.
