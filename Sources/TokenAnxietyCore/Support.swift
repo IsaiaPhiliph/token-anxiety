@@ -23,11 +23,15 @@ public enum ProcessRunner {
 
     /// `input` is written to the tool's stdin, which keeps secrets out of `ps`.
     public static func run(_ path: String, _ arguments: [String], input: Data? = nil,
-                           timeout: TimeInterval = 10) async throws -> Output {
+                           timeout: TimeInterval = 10, directory: URL? = nil,
+                           extraPath: [String] = []) async throws -> Output {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: path)
         process.arguments = arguments
+        var environment = environment
+        if !extraPath.isEmpty { environment["PATH"] = (extraPath + [environment["PATH"] ?? ""]).joined(separator: ":") }
         process.environment = environment
+        if let directory { process.currentDirectoryURL = directory }
         let stdin = Pipe()
         process.standardInput = input == nil ? FileHandle.nullDevice : stdin
         let stdout = Pipe()

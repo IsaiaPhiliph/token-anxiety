@@ -77,7 +77,7 @@ struct SettingsView: View {
             } header: {
                 Text("Statistics")
             } footer: {
-                Text("The key is only for AI advice (Statistics › Advice), which never sends anything until you have seen the exact request and pressed Send. It is not Claude Code's session.")
+                Text("The key is only for AI advice through the API (Statistics › Advice); through Claude Code or Codex it uses your plans instead. Nothing is sent until you have seen the exact request and pressed Send.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

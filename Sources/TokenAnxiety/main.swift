@@ -113,25 +113,45 @@ enum Doctor {
 }
 
 extension Doctor {
-    /// `--print --advice`: the exact AI advice request for the last 30 days. With `--send` it goes
-    /// to Anthropic (or `TA_ADVICE_URL`) with the key in the Keychain or `ANTHROPIC_API_KEY`.
+    /// `--print --advice [--engine claude-code|codex|api] [--demo]`: the exact AI advice request for the
+    /// last 30 days (of the demo data with `--demo`). With `--send` it runs: through the plan's own tool,
+    /// or to Anthropic (or `TA_ADVICE_URL`) with the key in the Keychain or `ANTHROPIC_API_KEY`.
     @MainActor
     static func advice() async {
-        let ledger = await LedgerIndexer(directory: nil).update()
-        let language = Fmt.locale.language.languageCode?.identifier == "es" ? "Spanish" : "English"
-        let body = Advice.body(summary: Advice.summary(ledger: ledger, calendar: Fmt.calendar), language: language)
-        let endpoint = ProcessInfo.processInfo.environment["TA_ADVICE_URL"].flatMap(URL.init(string:)) ?? Advice.endpoint
-        print("POST \(endpoint.absoluteString)")
-        print(String(decoding: body, as: UTF8.self))
-        guard CommandLine.arguments.contains("--send") else { return }
-        guard let key = ProcessInfo.processInfo.environment["ANTHROPIC_API_KEY"] ?? APIKeyStore.read() else {
-            print("== no API key (Settings › Statistics, or ANTHROPIC_API_KEY)")
-            return
+        let arguments = CommandLine.arguments
+        let engine: AdviceEngine = switch arguments.firstIndex(of: "--engine").flatMap({ arguments.indices.contains($0 + 1) ? arguments[$0 + 1] : nil }) {
+        case "claude-code": .claudeCode
+        case "codex": .codex
+        default: .api
         }
+        let ledger = arguments.contains("--demo") ? Demo.ledger() : await LedgerIndexer(directory: nil).update()
+        let language = Fmt.locale.language.languageCode?.identifier == "es" ? "Spanish" : "English"
+        let summary = Advice.summary(ledger: ledger, calendar: Fmt.calendar)
+        let send = arguments.contains("--send")
         do {
-            for tip in try await Advice.send(body: body, apiKey: key, endpoint: endpoint) {
-                print("== \(tip.title)\n   \(tip.evidence)\n   → \(tip.action)")
+            let tips: [Advice.Tip]
+            if engine == .api {
+                let body = Advice.body(summary: summary, language: language)
+                let endpoint = ProcessInfo.processInfo.environment["TA_ADVICE_URL"].flatMap(URL.init(string:)) ?? Advice.endpoint
+                print("POST \(endpoint.absoluteString)")
+                print(String(decoding: body, as: UTF8.self))
+                guard send else { return }
+                guard let key = ProcessInfo.processInfo.environment["ANTHROPIC_API_KEY"] ?? APIKeyStore.read() else {
+                    return print("== no API key (Settings › Statistics, or ANTHROPIC_API_KEY)")
+                }
+                tips = try await Advice.send(body: body, apiKey: key, endpoint: endpoint)
+            } else {
+                guard let executable = engine.executable() else { return print("== \(engine.title) is not on this Mac") }
+                let directory = FileManager.default.temporaryDirectory.appendingPathComponent("token-anxiety-advice-\(UUID().uuidString)")
+                let command = AdviceCommand.make(engine: engine, executable: executable, summary: summary, language: language,
+                                                 directory: directory)
+                print(command.preview)
+                guard send else { return }
+                let started = Date()
+                tips = try await command.run()
+                print("== answered in \(Int(Date().timeIntervalSince(started))) s")
             }
+            for tip in tips { print("== \(tip.title)\n   \(tip.evidence)\n   → \(tip.action)") }
         } catch {
             print("== error: \(error.localizedDescription)")
         }

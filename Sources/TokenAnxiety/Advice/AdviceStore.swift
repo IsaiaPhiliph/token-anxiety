@@ -43,8 +43,8 @@ enum APIKeyStore {
     }
 }
 
-/// Prepares the advice request for the user to read, sends it only when asked, and keeps
-/// the tips (with the user's ratings) on this Mac.
+/// Prepares the advice request for the user to read, sends it only when asked (through
+/// Claude Code, Codex or the API), and keeps the tips (with the user's ratings) on this Mac.
 @MainActor @Observable
 final class AdviceStore {
     enum State: Equatable {
@@ -53,12 +53,24 @@ final class AdviceStore {
         case failed(String)
     }
 
-    private(set) var preview: Data?
+    /// The exact request (API) or command (Claude Code, Codex), once prepared.
+    private(set) var preview: String?
     private(set) var tips: [Advice.Tip] = []
     private(set) var tipsDate: Date?
     private(set) var state = State.idle
     private(set) var hasKey = APIKeyStore.exists
+    /// The plans' command-line tools found on this Mac.
+    let installed: Set<AdviceEngine>
+    var engine: AdviceEngine {
+        didSet {
+            UserDefaults.standard.set(engine.rawValue, forKey: "adviceEngine")
+            discardPreview()
+            state = .idle
+        }
+    }
 
+    @ObservationIgnored private var pendingBody: Data?
+    @ObservationIgnored private var pendingCommand: AdviceCommand?
     @ObservationIgnored private let demo: Bool
     /// `TA_ADVICE_URL` points the request elsewhere, for trying the flow against a local fake.
     @ObservationIgnored private let endpoint: URL
@@ -67,36 +79,63 @@ final class AdviceStore {
         self.demo = demo
         endpoint = ProcessInfo.processInfo.environment["TA_ADVICE_URL"].flatMap(URL.init(string:)) ?? Advice.endpoint
         if demo && endpoint != Advice.endpoint { hasKey = true }
+        let found = Set([AdviceEngine.claudeCode, .codex].filter { $0.executable() != nil })
+        installed = found
+        // The user's plans first: no key needed, nothing billed apart.
+        engine = UserDefaults.standard.string(forKey: "adviceEngine").flatMap(AdviceEngine.init(rawValue:))
+            ?? [.claudeCode, .codex].first { found.contains($0) } ?? .api
         load()
         if demo { (tips, tipsDate) = (Self.demoTips, Date().addingTimeInterval(-3 * 3600)) }
     }
 
     var endpointDescription: String { endpoint.absoluteString }
 
+    /// Whether the chosen way can answer: a key for the API, the tool for a plan.
+    var canSend: Bool { engine == .api ? hasKey : installed.contains(engine) }
+
     func prepare(ledger: UsageLedger, includeProjects: Bool, plans: [ProviderID: String], weeklyUsed: [ProviderID: Double]) {
         let summary = Advice.summary(ledger: ledger, calendar: Fmt.calendar, includeProjects: includeProjects,
                                      plans: plans, weeklyUsed: weeklyUsed)
         let language = Fmt.locale.language.languageCode?.identifier == "es" ? "Spanish" : "English"
-        preview = Advice.body(summary: summary, language: language)
+        discardPreview()
+        if engine != .api, let executable = engine.executable() {
+            let folder = FileManager.default.temporaryDirectory.appendingPathComponent("token-anxiety-advice-\(UUID().uuidString)")
+            let command = AdviceCommand.make(engine: engine, executable: executable, summary: summary, language: language,
+                                             directory: folder)
+            pendingCommand = command
+            preview = command.preview
+        } else {
+            let body = Advice.body(summary: summary, language: language)
+            pendingBody = body
+            preview = String(decoding: body, as: UTF8.self)
+        }
         state = .idle
     }
 
     func discardPreview() {
         preview = nil
+        pendingBody = nil
+        pendingCommand = nil
     }
 
     func send() async {
-        guard let body = preview else { return }
-        let key = demo && endpoint != Advice.endpoint ? "demo" : APIKeyStore.read()
-        guard let key, !key.isEmpty else {
-            state = .failed(String(localized: "Add your Anthropic API key in Settings › Statistics first."))
-            return
-        }
         state = .sending
         do {
-            tips = try await Advice.send(body: body, apiKey: key, endpoint: endpoint)
+            if let command = pendingCommand {
+                tips = try await command.run()
+            } else if let body = pendingBody {
+                let key = demo && endpoint != Advice.endpoint ? "demo" : APIKeyStore.read()
+                guard let key, !key.isEmpty else {
+                    state = .failed(String(localized: "Add your Anthropic API key in Settings › Statistics first."))
+                    return
+                }
+                tips = try await Advice.send(body: body, apiKey: key, endpoint: endpoint)
+            } else {
+                state = .idle
+                return
+            }
             tipsDate = Date()
-            preview = nil
+            discardPreview()
             state = .idle
             save()
         } catch {

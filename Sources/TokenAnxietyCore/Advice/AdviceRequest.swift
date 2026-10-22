@@ -33,6 +33,8 @@ public enum Advice {
         case truncated
         case unreadable
         case api(status: Int, message: String)
+        /// A plan's command-line tool failed, with what it said.
+        case tool(String)
 
         public var errorDescription: String? {
             switch self {
@@ -40,6 +42,7 @@ public enum Advice {
             case .truncated: String(localized: "The answer was cut short. Try again.")
             case .unreadable: String(localized: "The answer could not be read.")
             case .api(let status, let message): String(localized: "The API answered \(status): \(message)")
+            case .tool(let message): message
             }
         }
     }
@@ -121,30 +124,44 @@ public enum Advice {
         return summary
     }
 
-    /// The whole Messages API request body, exactly as it will be sent.
-    public static func body(summary: [String: Any], language: String) -> Data {
+    /// The answer's shape: a list of tips, each with its evidence and one action.
+    public static var schema: [String: Any] {
         let tip: [String: Any] = [
             "type": "object", "additionalProperties": false, "required": ["title", "evidence", "action"],
             "properties": ["title": ["type": "string"], "evidence": ["type": "string"], "action": ["type": "string"]],
         ]
-        let schema: [String: Any] = [
+        return [
             "type": "object", "additionalProperties": false, "required": ["tips"],
             "properties": ["tips": ["type": "array", "items": tip]],
         ]
-        let data = (try? JSONSerialization.data(withJSONObject: summary, options: [.sortedKeys])) ?? Data()
+    }
+
+    public static func instructions(language: String) -> String {
+        """
+        You coach someone who uses Claude Code and Codex on flat-rate plans with five-hour and weekly limits. \
+        From the usage aggregates you are given, and nothing else, give three to six concrete tips that would make \
+        their limits last longer or waste fewer tokens: cache behaviour, model and effort choice, the size of tool \
+        output, session length and context size, when they work. Every tip cites numbers from the data as evidence \
+        and ends in one specific action. Leave out any tip the data does not support. Write in \(language).
+        """
+    }
+
+    /// The aggregates as the message the model reads.
+    public static func message(summary: [String: Any]) -> String {
+        let data = (try? JSONSerialization.data(withJSONObject: summary, options: [.sortedKeys, .prettyPrinted, .withoutEscapingSlashes]))
+            ?? Data()
+        return String(decoding: data, as: UTF8.self)
+    }
+
+    /// The whole Messages API request body, exactly as it will be sent.
+    public static func body(summary: [String: Any], language: String) -> Data {
         let request: [String: Any] = [
             "model": model,
             "max_tokens": 16_000,
             "fallbacks": "default",
             "output_config": ["effort": "medium", "format": ["type": "json_schema", "schema": schema]],
-            "system": """
-                You coach someone who uses Claude Code and Codex on flat-rate plans with five-hour and weekly limits. \
-                From the usage aggregates you are given, and nothing else, give three to six concrete tips that would make \
-                their limits last longer or waste fewer tokens: cache behaviour, model and effort choice, the size of tool \
-                output, session length and context size, when they work. Every tip cites numbers from the data as evidence \
-                and ends in one specific action. Leave out any tip the data does not support. Write in \(language).
-                """,
-            "messages": [["role": "user", "content": String(decoding: data, as: UTF8.self)]],
+            "system": instructions(language: language),
+            "messages": [["role": "user", "content": message(summary: summary)]],
         ]
         return (try? JSONSerialization.data(withJSONObject: request, options: [.sortedKeys, .prettyPrinted, .withoutEscapingSlashes]))
             ?? Data()
@@ -181,7 +198,17 @@ public enum Advice {
         default: break
         }
         let text = (json["content"]?.array ?? []).first { $0["type"]?.string == "text" }?["text"]?.string
-        guard let text, let tips = try? JSONDecoder().decode([String: [Tip]].self, from: Data(text.utf8))["tips"] else {
+        return try tips(fromJSONText: text)
+    }
+
+    /// `{"tips": [...]}`, as the model wrote it (some wrap it in a code fence).
+    static func tips(fromJSONText text: String?) throws -> [Tip] {
+        guard var text = text?.trimmingCharacters(in: .whitespacesAndNewlines) else { throw Failure.unreadable }
+        if text.hasPrefix("```"), let start = text.firstIndex(of: "\n"), let end = text.range(of: "```", options: .backwards),
+           end.lowerBound > start {
+            text = String(text[text.index(after: start)..<end.lowerBound])
+        }
+        guard let tips = try? JSONDecoder().decode([String: [Tip]].self, from: Data(text.utf8))["tips"] else {
             throw Failure.unreadable
         }
         return tips

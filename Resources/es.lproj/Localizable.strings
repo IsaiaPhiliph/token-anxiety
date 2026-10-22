@@ -451,10 +451,8 @@
 "Saved in the Keychain" = "Guardada en el llavero";
 "Remove" = "Quitar";
 "Save" = "Guardar";
-"The key is only for AI advice (Statistics › Advice), which never sends anything until you have seen the exact request and pressed Send. It is not Claude Code's session." = "La clave solo sirve para los consejos con IA (Estadísticas › Consejos), que no envían nada hasta que has visto la petición exacta y pulsado Enviar. No es la sesión de Claude Code.";
 "AI advice" = "Consejos con IA";
 "Claude reads your last 30 days, in numbers only, and suggests how to make your limits last." = "Claude lee tus últimos 30 días, solo en números, y te propone cómo hacer que te duren los límites.";
-"What goes: totals, models, effort, hours of the day, content sizes and session lengths. Never your prompts, files, paths or accounts. It is sent to Anthropic with your own API key, only when you press Send, and billed to your account (a few cents)." = "Qué se envía: totales, modelos, esfuerzo, horas del día, tamaños del contenido y duración de las sesiones. Nunca tus prompts, ficheros, rutas ni cuentas. Va a Anthropic con tu propia clave de API, solo cuando pulsas Enviar, y se cobra a tu cuenta (unos céntimos).";
 "Include project names" = "Incluir los nombres de los proyectos";
 "Prepare the request" = "Preparar la petición";
 "Add your API key in Settings › Statistics" = "Añade tu clave de API en Ajustes › Estadísticas";
@@ -463,7 +461,6 @@
 "POST %@ · %@ · your key goes in the x-api-key header" = "POST %@ · %@ · tu clave va en la cabecera x-api-key";
 "Send" = "Enviar";
 "Discard" = "Descartar";
-"Claude is reading your numbers…" = "Claude está leyendo tus números…";
 "Tips" = "Consejos";
 "Useful" = "Útil";
 "Not useful" = "No es útil";
@@ -487,3 +484,17 @@
 "Saved as %@" = "Guardada como %@";
 "Close" = "Cerrar";
 "Save as PNG…" = "Guardar como PNG…";
+"API key" = "Clave de API";
+"Ask" = "Preguntar a";
+"%@ is not on this Mac" = "%@ no está en este Mac";
+"%@ is reading your numbers…" = "%@ está leyendo tus números…";
+"Claude Code could not answer." = "Claude Code no ha podido responder.";
+"Claude Code did not answer (%lld)." = "Claude Code no ha respondido (%lld).";
+"The tool stopped with an error (%lld)." = "La herramienta se ha parado con un error (%lld).";
+"The exact command" = "El comando exacto";
+"Runs on this Mac, in an empty folder of its own, with your own login" = "Se ejecuta en este Mac, en una carpeta vacía propia, con tu propia sesión";
+"Runs Claude Code on this Mac with your own login (claude -p), so it uses your Claude plan: one request, a little of your five-hour and weekly limits. No API key, and no session is saved." = "Ejecuta Claude Code en este Mac con tu propia sesión (claude -p), así que usa tu plan de Claude: una petición, un poco de tus límites de 5 horas y de la semana. Sin clave de API, y no se guarda ninguna sesión.";
+"Runs Codex on this Mac with your ChatGPT login (codex exec), so it uses your plan's limits a little. No API key, and no session is saved." = "Ejecuta Codex en este Mac con tu sesión de ChatGPT (codex exec), así que usa un poco de los límites de tu plan. Sin clave de API, y no se guarda ninguna sesión.";
+"Sends the request to the Anthropic API with your own key, billed to your API account (a few cents)." = "Envía la petición a la API de Anthropic con tu propia clave, y se cobra a tu cuenta de API (unos céntimos).";
+"What goes: totals, models, effort, hours of the day, content sizes and session lengths. Never your prompts, files, paths or accounts, and nothing until you press Send." = "Qué se envía: totales, modelos, esfuerzo, horas del día, tamaños del contenido y duración de las sesiones. Nunca tus prompts, ficheros, rutas ni cuentas, y nada hasta que pulsas Enviar.";
+"The key is only for AI advice through the API (Statistics › Advice); through Claude Code or Codex it uses your plans instead. Nothing is sent until you have seen the exact request and pressed Send." = "La clave solo sirve para los consejos con IA a través de la API (Estadísticas › Consejos); con Claude Code o Codex se usan tus planes. No se envía nada hasta que has visto la petición exacta y pulsado Enviar.";

@@ -123,3 +123,55 @@ final class FakeAnthropic: URLProtocol, @unchecked Sendable {
         }
     }
 }
+
+@Suite struct AdviceCommandTests {
+    private let summary: [String: Any] = ["period_days": 30, "totals": ["tokens": 1234]]
+    private let folder = URL(fileURLWithPath: "/tmp/advice-test")
+
+    @Test func claudeCodeRunsBareAndSavesNothing() {
+        let command = AdviceCommand.make(engine: .claudeCode, executable: URL(fileURLWithPath: "/bin/claude"),
+                                         summary: summary, language: "Spanish", directory: folder)
+        let arguments = command.arguments
+        #expect(arguments.first == "-p")
+        for flag in ["--no-session-persistence", "--strict-mcp-config", "--disable-slash-commands", "--json-schema", "--system-prompt"] {
+            #expect(arguments.contains(flag))
+        }
+        #expect(arguments[arguments.firstIndex(of: "--tools")! + 1] == "")
+        #expect(arguments[arguments.firstIndex(of: "--model")! + 1] == Advice.model)
+        #expect(command.input.contains("\"tokens\" : 1234"))
+        #expect(command.preview.contains("--tools ''"))
+        #expect(command.preview.hasPrefix("$ cd /tmp/advice-test"))
+    }
+
+    @Test func codexRunsEphemeralAndReadOnly() {
+        let command = AdviceCommand.make(engine: .codex, executable: URL(fileURLWithPath: "/bin/codex"),
+                                         summary: summary, language: "English", directory: folder)
+        let arguments = command.arguments
+        #expect(arguments.first == "exec")
+        #expect(arguments.last == "-")
+        for flag in ["--ephemeral", "--skip-git-repo-check", "--ignore-user-config"] { #expect(arguments.contains(flag)) }
+        #expect(arguments[arguments.firstIndex(of: "--sandbox")! + 1] == "read-only")
+        #expect(arguments[arguments.firstIndex(of: "--output-schema")! + 1] == "/tmp/advice-test/schema.json")
+        #expect(command.input.hasPrefix(Advice.instructions(language: "English")))
+    }
+
+    @Test func readsClaudeCodeAnswers() throws {
+        let tip = #"{"title":"T","evidence":"E","action":"A"}"#
+        let structured = Data(#"{"type":"result","subtype":"success","is_error":false,"result":"","structured_output":{"tips":[\#(tip)]}}"#.utf8)
+        #expect(try AdviceCommand.claudeTips(structured, status: 0) == [Advice.Tip(title: "T", evidence: "E", action: "A")])
+        let fenced = try JSONSerialization.data(withJSONObject: ["type": "result", "is_error": false,
+                                                                 "result": "```json\n{\"tips\":[\(tip)]}\n```"])
+        #expect(try AdviceCommand.claudeTips(fenced, status: 0).count == 1)
+        let failed = Data(#"{"type":"result","subtype":"error_during_execution","is_error":true,"result":"Not logged in"}"#.utf8)
+        #expect(throws: Advice.Failure.tool("Not logged in")) { try AdviceCommand.claudeTips(failed, status: 1) }
+        #expect(throws: Advice.Failure.tool("Invalid API key · Please run /login")) {
+            try AdviceCommand.claudeTips(Data(), status: 1, errorText: "warning\nInvalid API key · Please run /login\n")
+        }
+    }
+
+    @Test func quotesLikeAShell() {
+        #expect(AdviceCommand.quoted("plain") == "plain")
+        #expect(AdviceCommand.quoted("") == "''")
+        #expect(AdviceCommand.quoted("it's") == "'it'\\''s'")
+    }
+}

@@ -10,7 +10,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 - Content analysis (Statistics › Content): what fills Claude Code's context, from your prompts to each tool's results, estimated from sizes; no text is kept. It can be turned off in Settings › Statistics.
 - The panel shows how full the context window of each live Claude Code session is.
 - A share card: a PNG of your year or your achievements, made on your Mac.
-- AI advice (Statistics › Advice): tips from Claude Opus 5.5 on making your limits last, with your own API key, from aggregates only, after you have seen the exact request.
+- AI advice (Statistics › Advice): tips on making your limits last, from aggregates only, after you have seen the exact request. It runs through the plans you already pay for (Claude Code's `claude -p` or Codex's `codex exec`, with your own login) or with your own Anthropic API key.
 - A Statistics window (from the panel or the right-click menu): tokens and API-equivalent cost by day, hour, weekday, project, model, effort and session, a year of activity, streaks, and what your plan's current week would cost through the API. The panel shows today's tokens under Claude and Codex.
 - A local usage history: tokens, an API-equivalent cost estimate, projects, models and sessions read from Claude Code's and Codex's own logs, kept by the app so it outlives their cleanup. `--print --stats` prints it.
 - When Codex cannot be reached, its quota comes from the windows it last wrote in its logs.

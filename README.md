@@ -48,7 +48,7 @@ Open it from the chart button in the panel, or from the menu bar item's right-cl
 | <img src="docs/stats-models.png" alt="Models: share by model, requests by effort, and where Claude Code ran"> | <img src="docs/stats-sessions.png" alt="Sessions: a searchable table of conversations"> |
 | **Models**: share by model, requests by reasoning effort, and where Claude Code ran (app, terminal, VS Code). | **Sessions**: every conversation with its project, branch, model, length, subagents, tokens and cost. |
 | <img src="docs/stats-content.png" alt="Content: what fills the context, and tool results by tool"> | <img src="docs/stats-advice.png" alt="Advice: tips from Claude based on your numbers"> |
-| **Content**: what fills the context (your prompts, tool results by tool, Claude's replies) and how much of the output is thinking, estimated from sizes. | **Advice**: optional tips from Claude on making your limits last, with your own API key (see below). |
+| **Content**: what fills the context (your prompts, tool results by tool, Claude's replies) and how much of the output is thinking, estimated from sizes. | **Advice**: optional tips from Claude or Codex on making your limits last, through the plans you already pay for (see below). |
 
 The figures come from the logs Claude Code (`~/.claude/projects`) and Codex (`~/.codex/sessions`) already write on your Mac. A response written several times in a log, or copied into a forked session, counts once. Claude Code deletes its logs after 30 days, so Token Anxiety keeps its own totals from the day it first reads them (to keep more in Claude Code too, set `cleanupPeriodDays` in `~/.claude/settings.json`). Costs are estimates at API prices, not what your plan charges.
 
@@ -69,7 +69,13 @@ Make an image of your year or your achievements and save it as a PNG, from the s
 
 ### AI advice
 
-Statistics › Advice can ask Claude (Opus 5.5, through the Anthropic API) for tips on making your limits last, from your last 30 days. It needs your own Anthropic API key, saved in the Keychain from Settings › Statistics; it never uses Claude Code's session. Only aggregates are sent (totals, models, effort, hours of the day, content sizes, session lengths), never prompts, files, paths or accounts, and project names only if you tick the box. You see the exact request before anything is sent, and nothing leaves until you press Send. Each request is billed to your API account (a few cents).
+Statistics › Advice asks for tips on making your limits last, from your last 30 days, in one of three ways:
+
+- **Claude Code** (the default when it is installed): runs `claude -p` on your Mac with your own login, so it uses your Claude plan, one request's worth of your limits. It runs with no tools, MCP servers or hooks, in an empty folder, and saves no session.
+- **Codex**: runs `codex exec` with your ChatGPT login, the same way (`--ephemeral`, read-only).
+- **API key**: your own Anthropic API key, saved in the Keychain from Settings › Statistics, billed to your API account (a few cents).
+
+The plans' tools are run as they are meant to be scripted; Token Anxiety never takes their session tokens to call the API itself (Anthropic doesn't allow a subscription's token in other apps). Only aggregates are sent (totals, models, effort, hours of the day, content sizes, session lengths), never prompts, files, paths or accounts, and project names only if you tick the box. You see the exact request or command first, and nothing runs until you press Send.
 
 ## Install
 
@@ -90,7 +96,7 @@ This builds a release version, signs it for your Mac (ad hoc), copies it to `/Ap
 - Claude Code's session lasts 8 hours, and only the `claude` command renews it. When it has expired, Token Anxiety renews it the way Claude Code does and saves it back in the same Keychain item, leaving every other field alone, so Claude Code keeps working. This can be turned off in Settings.
 - Claude Code's and Codex's logs are only read, never changed. From them the app keeps token counts, models, times, project and branch names and session titles; with content analysis on (Settings › Statistics), the sizes of prompts, tool results and replies, never their text.
 - Everything stays in `~/Library/Application Support/TokenAnxiety/`: `state.json` (the latest figures and their history), `usage/usage.json` (the usage history), `achievements.json` and `advice.json`.
-- AI advice is the only feature that sends anything about your usage, and only to Anthropic, with your key, after you have read the request and pressed Send.
+- AI advice is the only feature that sends anything about your usage: aggregates only, through Claude Code, Codex or your API key, after you have read the exact request and pressed Send.
 
 ## Troubleshooting
 
@@ -109,7 +115,7 @@ swift test                                                               # parse
 APP="build/Token Anxiety.app/Contents/MacOS/TokenAnxiety"
 "$APP" --print --debug                # every service, once
 "$APP" --print --stats --days 7       # what the local logs add up to
-"$APP" --print --advice               # the exact AI advice request (add --send to send it)
+"$APP" --print --advice --engine claude-code --demo   # the exact advice command (--send runs it)
 "$APP" --demo --export-card card.png  # a share card (add --achievements for the other one)
 ```
 

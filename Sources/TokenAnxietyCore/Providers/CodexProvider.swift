@@ -64,8 +64,10 @@ public actor CodexProvider: UsageProvider {
 
     // MARK: Codex binary
 
+    func findBinary() -> URL? { Self.binary(home: home) }
+
     /// The native binary, newest install first: the desktop app keeps its own up to date.
-    func findBinary() -> URL? {
+    public static func binary(home: URL = FileManager.default.homeDirectoryForCurrentUser) -> URL? {
         let fm = FileManager.default
         var candidates = [
             URL(fileURLWithPath: "/Applications/Codex.app/Contents/Resources/codex"),

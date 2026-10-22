@@ -12,25 +12,43 @@ struct AdviceSection: View {
         VStack(alignment: .leading, spacing: 18) {
             StatsCard(title: String(localized: "AI advice"),
                       subtitle: String(localized: "Claude reads your last 30 days, in numbers only, and suggests how to make your limits last.")) {
-                Text("What goes: totals, models, effort, hours of the day, content sizes and session lengths. Never your prompts, files, paths or accounts. It is sent to Anthropic with your own API key, only when you press Send, and billed to your account (a few cents).")
+                HStack(spacing: 10) {
+                    Text("Ask")
+                        .fixedSize()
+                    Picker("Ask", selection: Binding(get: { advice.engine }, set: { advice.engine = $0 })) {
+                        ForEach(AdviceEngine.allCases) { engine in Text(engine.title).tag(engine) }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .frame(maxWidth: 360)
+                }
+                Text(explanation(advice.engine))
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("What goes: totals, models, effort, hours of the day, content sizes and session lengths. Never your prompts, files, paths or accounts, and nothing until you press Send.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 Toggle("Include project names", isOn: $includeProjects)
                 HStack(spacing: 12) {
                     Button("Prepare the request", systemImage: "doc.text.magnifyingglass") { prepare() }
-                    if !advice.hasKey {
-                        Label("Add your API key in Settings › Statistics", systemImage: "key")
+                    if !advice.canSend {
+                        Label(advice.engine == .api ? String(localized: "Add your API key in Settings › Statistics")
+                                                    : String(localized: "\(advice.engine.title) is not on this Mac"),
+                              systemImage: advice.engine == .api ? "key" : "questionmark.app.dashed")
                             .font(.callout)
                             .foregroundStyle(.secondary)
                     }
                 }
             }
             if let preview = advice.preview {
-                StatsCard(title: String(localized: "The exact request"),
-                          subtitle: String(localized: "POST \(advice.endpointDescription) · \(Advice.model) · your key goes in the x-api-key header")) {
+                StatsCard(title: advice.engine == .api ? String(localized: "The exact request") : String(localized: "The exact command"),
+                          subtitle: advice.engine == .api
+                              ? String(localized: "POST \(advice.endpointDescription) · \(Advice.model) · your key goes in the x-api-key header")
+                              : String(localized: "Runs on this Mac, in an empty folder of its own, with your own login")) {
                     ScrollView {
-                        Text(String(decoding: preview, as: UTF8.self))
+                        Text(preview)
                             .font(.system(size: 11, design: .monospaced))
                             .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -41,12 +59,13 @@ struct AdviceSection: View {
                     HStack(spacing: 10) {
                         Button("Send", systemImage: "paperplane") { Task { await advice.send() } }
                             .buttonStyle(.borderedProminent)
-                            .disabled(!advice.hasKey || advice.state == .sending)
+                            .disabled(!advice.canSend || advice.state == .sending)
                         Button("Discard") { advice.discardPreview() }
                             .disabled(advice.state == .sending)
                         if advice.state == .sending {
                             ProgressView().controlSize(.small)
-                            Text("Claude is reading your numbers…").font(.callout).foregroundStyle(.secondary)
+                            Text("\(advice.engine == .codex ? "Codex" : "Claude") is reading your numbers…")
+                                .font(.callout).foregroundStyle(.secondary)
                         }
                     }
                 }
@@ -70,6 +89,17 @@ struct AdviceSection: View {
                     }
                 }
             }
+        }
+    }
+
+    private func explanation(_ engine: AdviceEngine) -> String {
+        switch engine {
+        case .claudeCode:
+            String(localized: "Runs Claude Code on this Mac with your own login (claude -p), so it uses your Claude plan: one request, a little of your five-hour and weekly limits. No API key, and no session is saved.")
+        case .codex:
+            String(localized: "Runs Codex on this Mac with your ChatGPT login (codex exec), so it uses your plan's limits a little. No API key, and no session is saved.")
+        case .api:
+            String(localized: "Sends the request to the Anthropic API with your own key, billed to your API account (a few cents).")
         }
     }
 
