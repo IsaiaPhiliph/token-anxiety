@@ -146,7 +146,32 @@ public enum Demo {
                 }
                 ledger.setTitle(titles[sessionNumber % titles.count], provider: codex ? .codex : .claude,
                                 session: session, custom: true)
+                if !codex {
+                    var content = ContentCounts()
+                    content.prompts = requests * (120 + Int(random.next() * 400))
+                    content.replies = requests * (300 + Int(random.next() * 900))
+                    content.toolCalls = requests * (500 + Int(random.next() * 1500))
+                    for (tool, size) in [("Read", 4_000), ("Bash", 2_600), ("Grep", 700), ("Edit", 500), ("WebFetch", 300),
+                                         ("MCP · github", 200)] {
+                        content.toolResults[tool] = Int(Double(requests * size) * (0.5 + random.next()))
+                    }
+                    content.agentPrompts = requests * 40
+                    ledger.addContent(content, date: date)
+                }
             }
+        }
+        // Two Claude Code sessions still going, for the context bars.
+        for (index, (title, context)) in [("Charts for the stats window", 412_000), ("Fix the login redirect", 168_000)].enumerated() {
+            let session = "demo-live-\(index)"
+            for minute in stride(from: 40, through: 2 + index * 4, by: -2) {
+                let size = context - minute * 3_000
+                ledger.add(UsageEvent(provider: .claude, date: now.addingTimeInterval(-Double(minute) * 60), session: session,
+                                      project: index == 0 ? "token-anxiety" : "web-shop", branch: "main",
+                                      model: "claude-opus-5-5", effort: "high",
+                                      counts: TokenCounts(input: 4, output: 900, cacheWrite5m: 3_000, cacheRead: size - 3_004,
+                                                          requests: 1)))
+            }
+            ledger.setTitle(title, provider: .claude, session: session, custom: true)
         }
         return ledger
     }

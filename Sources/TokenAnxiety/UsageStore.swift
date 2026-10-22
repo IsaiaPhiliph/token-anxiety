@@ -24,6 +24,7 @@ final class UsageStore {
     /// Tokens, projects and sessions from the local logs, beside the quotas.
     let usage: UsageLedgerStore
     let achievements: AchievementStore
+    let advice: AdviceStore
     @ObservationIgnored private let providers: [ProviderID: any UsageProvider]
     @ObservationIgnored private let notifier: Notifier
     @ObservationIgnored private var alerts = AlertTracker()
@@ -37,6 +38,7 @@ final class UsageStore {
         self.demo = demo
         usage = UsageLedgerStore(demo: demo)
         achievements = AchievementStore(demo: demo, notifier: notifier, settings: settings)
+        advice = AdviceStore(demo: demo)
         if demo {
             providers = Dictionary(uniqueKeysWithValues: ProviderID.allCases.map { ($0, DemoProvider($0) as any UsageProvider) })
             history = Demo.history()
@@ -50,7 +52,15 @@ final class UsageStore {
             load()
         }
         usage.onUpdate = { [weak self] ledger in self?.achievements.ledgerUpdated(ledger) }
-        settings.onChange = { [weak self] key in self?.achievements.settingChanged(key) }
+        usage.setMeasuresContent(settings.measureContent)
+        settings.onChange = { [weak self] key in
+            guard let self else { return }
+            achievements.settingChanged(key)
+            if key == "measureContent" {
+                usage.setMeasuresContent(settings.measureContent)
+                usage.update()
+            }
+        }
         if demo { achievements.ledgerUpdated(usage.ledger) }
     }
 

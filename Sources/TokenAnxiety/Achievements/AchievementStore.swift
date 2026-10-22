@@ -75,6 +75,8 @@ final class AchievementStore {
         facts = AchievementFacts.compute(ledger: ledger, plans: plans, quota: demo ? Self.demoQuota : book.watcher.counters,
                                          app: book.app, calendar: Fmt.calendar)
         let (unlocks, first) = book.evaluate(facts)
+        // The demo starts with its history's achievements already seen.
+        if demo && first { book.markSeen() }
         save()
         guard !unlocks.isEmpty, !demo, settings.notificationsEnabled else { return }
         announce(unlocks, summary: first || unlocks.count > 3)

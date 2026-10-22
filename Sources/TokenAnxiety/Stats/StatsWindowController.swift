@@ -12,8 +12,9 @@ final class StatsWindowController {
         self.store = store
     }
 
-    func show(section: StatsSection? = nil) {
+    func show(section: StatsSection? = nil, sharing: Bool = false) {
         if let section { navigation.section = section }
+        if sharing { navigation.sharing = true }
         if window == nil {
             let view = StatsView(store: store, usage: store.usage, navigation: navigation)
             let window = NSWindow(contentViewController: NSHostingController(rootView: view))
@@ -21,9 +22,10 @@ final class StatsWindowController {
             window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
             window.toolbarStyle = .unified
             window.isReleasedWhenClosed = false
-            window.setContentSize(NSSize(width: 980, height: 700))
-            window.contentMinSize = NSSize(width: 820, height: 560)
-            window.setFrameAutosaveName("Statistics")
+            // Wide enough for the whole toolbar in English and Spanish.
+            window.setContentSize(NSSize(width: 1080, height: 720))
+            window.contentMinSize = NSSize(width: 860, height: 560)
+            window.setFrameAutosaveName("Statistics.v2")
             if window.frame.origin == .zero { window.center() }
             self.window = window
         }

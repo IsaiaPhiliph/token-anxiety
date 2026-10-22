@@ -13,14 +13,17 @@ struct ProviderSection: View {
     let stale: Bool
     /// Today's tokens from the local logs (Claude Code, Codex).
     let today: UsageTotals?
+    /// Live Claude Code sessions and how full their context is.
+    let contexts: [ContextGauge]
 
     @AppStorage private var showsHistory: Bool
 
     init(id: ProviderID, entry: UsageStore.Entry, settings: AppSettings, history: HistoryLog, now: Date,
-         retry: @escaping () -> Void, stale: Bool = false, today: UsageTotals? = nil) {
+         retry: @escaping () -> Void, stale: Bool = false, today: UsageTotals? = nil, contexts: [ContextGauge] = []) {
         self.id = id
         self.stale = stale
         self.today = today
+        self.contexts = contexts
         self.entry = entry
         self.settings = settings
         self.history = history
@@ -47,6 +50,7 @@ struct ProviderSection: View {
                 }
                 let facts = snapshot.facts + todayFact
                 if !facts.isEmpty { self.facts(facts) }
+                if !contexts.isEmpty { contextRows }
                 if settings.historyEnabled { historyBlock(snapshot) }
             }
             if let error = entry.error { errorLine(error) }
@@ -190,6 +194,34 @@ struct ProviderSection: View {
                 .frame(width: 40, alignment: .trailing)
         }
         .help([window.detail, Fmt.resetLine(window.resetsAt, now: now)].compactMap { $0 }.joined(separator: " · "))
+    }
+
+    // MARK: Context
+
+    private var contextRows: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(contexts) { gauge in
+                HStack(spacing: 8) {
+                    Image(systemName: "text.line.first.and.arrowtriangle.forward")
+                        .font(.system(size: 10))
+                        .frame(width: 14)
+                        .foregroundStyle(.secondary)
+                    Text(gauge.title)
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .frame(width: 124, alignment: .leading)
+                    UsageBar(value: gauge.percent, tint: gauge.percent >= 80 ? .orange : .accentColor, height: 4)
+                    Text(Fmt.percent(gauge.percent))
+                        .font(.system(size: 11.5, weight: .medium).monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .frame(width: 40, alignment: .trailing)
+                }
+                .help(String(localized: "Context: \(Fmt.tokens(Double(gauge.tokens))) of \(Fmt.tokens(Double(gauge.window))) tokens · \(ModelNames.display(gauge.model))"))
+            }
+        }
+        .padding(.top, 2)
     }
 
     // MARK: Facts

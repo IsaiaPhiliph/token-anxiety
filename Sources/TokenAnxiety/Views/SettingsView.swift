@@ -11,6 +11,7 @@ struct SettingsView: View {
     @State private var loginStatus = LoginItem.status
     @State private var loginError: String?
     @State private var notificationAccess: NotificationAccess?
+    @State private var apiKey = ""
 
     var body: some View {
         Form {
@@ -43,6 +44,40 @@ struct SettingsView: View {
                 Text("Services")
             } footer: {
                 Text("Found on their own through each app's session. Sessions are read on this Mac and only sent to their own service (Anthropic, OpenAI, Cursor); Antigravity is asked locally.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
+                Toggle(isOn: $settings.measureContent) {
+                    Text("Measure what fills the context")
+                    Text("Reads the size of your prompts, tool results and Claude's replies in Claude Code's logs, on this Mac. Only sizes are kept.")
+                }
+                if store.advice.hasKey {
+                    LabeledContent("Anthropic API key") {
+                        HStack {
+                            Label("Saved in the Keychain", systemImage: "checkmark.seal")
+                                .foregroundStyle(.secondary)
+                            Button("Remove") { store.advice.removeKey() }
+                        }
+                    }
+                } else {
+                    LabeledContent("Anthropic API key") {
+                        HStack {
+                            SecureField("sk-ant-…", text: $apiKey)
+                                .frame(minWidth: 180)
+                            Button("Save") {
+                                store.advice.saveKey(apiKey)
+                                apiKey = ""
+                            }
+                            .disabled(apiKey.trimmingCharacters(in: .whitespaces).isEmpty)
+                        }
+                    }
+                }
+            } header: {
+                Text("Statistics")
+            } footer: {
+                Text("The key is only for AI advice (Statistics › Advice), which never sends anything until you have seen the exact request and pressed Send. It is not Claude Code's session.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

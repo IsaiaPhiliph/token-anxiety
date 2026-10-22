@@ -35,16 +35,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         if arguments.contains("--open-settings") { showSettings() }
+        if let index = arguments.firstIndex(of: "--export-card"), arguments.indices.contains(index + 1) {
+            // `--export-card FILE.png [--achievements]`: the share card, written once the history is read.
+            exportCard(to: URL(fileURLWithPath: arguments[index + 1]), achievements: arguments.contains("--achievements"))
+        }
         if let index = arguments.firstIndex(of: "--open-stats") {
             // An optional section to start on, for screenshots: `--open-stats hours`.
-            let section = arguments.indices.contains(index + 1) ? StatsSection(rawValue: arguments[index + 1]) : nil
-            showStats(section: section)
+            let name = arguments.indices.contains(index + 1) ? arguments[index + 1] : ""
+            showStats(section: StatsSection(rawValue: name), sharing: name == "share")
         }
     }
 
-    func showStats(section: StatsSection? = nil) {
+    private func exportCard(to url: URL, achievements: Bool) {
+        Task {
+            // The demo has its history at once; a real one waits for the first read.
+            while !store.demo && store.usage.lastUpdate == nil { try? await Task.sleep(for: .milliseconds(200)) }
+            let card = ShareCardView(template: achievements ? .achievements : .activity, ledger: store.usage.ledger,
+                                     book: store.achievements.book, showCost: true, now: Date())
+            if let png = card.png() { try? png.write(to: url) }
+            NSApp.terminate(nil)
+        }
+    }
+
+    func showStats(section: StatsSection? = nil, sharing: Bool = false) {
         if stats == nil { stats = StatsWindowController(store: store) }
-        stats?.show(section: section)
+        stats?.show(section: section, sharing: sharing)
     }
 
     func showSettings() {
@@ -69,6 +84,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 enum Doctor {
     static func run() async {
         if CommandLine.arguments.contains("--stats") { return await stats() }
+        if CommandLine.arguments.contains("--advice") { return await advice() }
         var providers: [any UsageProvider] = [ClaudeProvider(), CodexProvider(), AntigravityProvider(), CursorProvider()]
         let arguments = CommandLine.arguments
         if let index = arguments.firstIndex(of: "--only"), index + 1 < arguments.count {
@@ -97,6 +113,30 @@ enum Doctor {
 }
 
 extension Doctor {
+    /// `--print --advice`: the exact AI advice request for the last 30 days. With `--send` it goes
+    /// to Anthropic (or `TA_ADVICE_URL`) with the key in the Keychain or `ANTHROPIC_API_KEY`.
+    @MainActor
+    static func advice() async {
+        let ledger = await LedgerIndexer(directory: nil).update()
+        let language = Fmt.locale.language.languageCode?.identifier == "es" ? "Spanish" : "English"
+        let body = Advice.body(summary: Advice.summary(ledger: ledger, calendar: Fmt.calendar), language: language)
+        let endpoint = ProcessInfo.processInfo.environment["TA_ADVICE_URL"].flatMap(URL.init(string:)) ?? Advice.endpoint
+        print("POST \(endpoint.absoluteString)")
+        print(String(decoding: body, as: UTF8.self))
+        guard CommandLine.arguments.contains("--send") else { return }
+        guard let key = ProcessInfo.processInfo.environment["ANTHROPIC_API_KEY"] ?? APIKeyStore.read() else {
+            print("== no API key (Settings › Statistics, or ANTHROPIC_API_KEY)")
+            return
+        }
+        do {
+            for tip in try await Advice.send(body: body, apiKey: key, endpoint: endpoint) {
+                print("== \(tip.title)\n   \(tip.evidence)\n   → \(tip.action)")
+            }
+        } catch {
+            print("== error: \(error.localizedDescription)")
+        }
+    }
+
     /// Totals per day, project and model from Claude Code's and Codex's logs, read from
     /// scratch into memory (the app's own ledger is left alone; `--store DIR` keeps one
     /// there instead, to time later reads). Project names only, no paths.
@@ -140,6 +180,12 @@ extension Doctor {
             for (model, totals) in ledger.grouped(in: interval, provider: provider, by: { ModelNames.display($0.model) })
                 .sorted(by: { $0.value.counts.total > $1.value.counts.total }) {
                 print("     \(model): \(Fmt.tokens(Double(totals.counts.total))) ≈\(String(format: "$%.2f", totals.cost))")
+            }
+            if provider == .claude {
+                let content = ledger.content(in: interval)
+                let tools = content.toolResults.sorted { $0.value > $1.value }.prefix(5)
+                    .map { "\($0.key) \(Fmt.tokens(ContentCounts.tokens($0.value)))" }.joined(separator: ", ")
+                print("   content ≈ prompts \(Fmt.tokens(ContentCounts.tokens(content.prompts))), tool results \(Fmt.tokens(ContentCounts.tokens(content.toolResultCharacters))) (\(tools)), replies \(Fmt.tokens(ContentCounts.tokens(content.replies))), tool calls \(Fmt.tokens(ContentCounts.tokens(content.toolCalls)))")
             }
             let sessions = ledger.sessions(in: interval, provider: provider)
             print("   sessions: \(sessions.count), with subagents: \(sessions.filter { !$0.agents.isEmpty }.count), titled: \(sessions.filter { ledger.title(of: $0) != nil }.count)")

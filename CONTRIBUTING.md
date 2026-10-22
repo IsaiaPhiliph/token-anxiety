@@ -25,7 +25,9 @@ Run against your own accounts with `"build/Token Anxiety.app/Contents/MacOS/Toke
 - `Sources/TokenAnxietyCore`: everything that can be tested without a window.
   - `Providers/`: one actor per service, conforming to `UsageProvider` (`isInstalled()`, `fetch()`). Each has static `snapshot(...)` parsers that the tests feed with sample JSON.
   - `Models.swift` (`ProviderSnapshot`, `UsageWindow`, `ProviderError`), `Pace.swift`, `History.swift` (history and alert rules), `Formatting.swift`, `Demo.swift` (`--demo` data).
-- `Sources/TokenAnxiety`: the app. `UsageStore` polls the providers, `StatusItemController` and `MenuBarRenderer` draw the menu bar item, `PanelController` hosts the SwiftUI panel, `Views/SettingsView` is the settings window.
+  - `Usage/`: reading Claude Code's and Codex's logs into the usage history (`LedgerIndexer`, `UsageLedger`), API prices (`Pricing`), content sizes and the context gauge.
+  - `Achievements/`: the catalog, what it is judged on, the quota watcher and the book of earned tiers. `Advice/`: the AI advice request.
+- `Sources/TokenAnxiety`: the app. `UsageStore` polls the providers, `StatusItemController` and `MenuBarRenderer` draw the menu bar item, `PanelController` hosts the SwiftUI panel, `Views/SettingsView` is the settings window, `Stats/` the Statistics window, `Achievements/` and `Advice/` their sections.
 - `scripts/build-app.sh` assembles and ad-hoc signs `build/Token Anxiety.app`.
 
 ## Adding a service

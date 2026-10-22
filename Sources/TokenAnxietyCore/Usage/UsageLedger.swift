@@ -35,6 +35,8 @@ public struct UsageLedger: Sendable, Equatable {
     public internal(set) var sessions: [String: SessionSummary] = [:]
     /// Session names by `SessionSummary.id`; a name the user chose wins over a generated one.
     public internal(set) var titles: [String: SessionTitle] = [:]
+    /// Content sizes per UTC day (days since 1970), from `ContentReader`.
+    public internal(set) var content: [Int: ContentCounts] = [:]
 
     public init() {}
 
@@ -54,6 +56,21 @@ public struct UsageLedger: Sendable, Equatable {
                                                     project: event.project, date: event.date)
         session.add(event)
         sessions[id] = session
+    }
+
+    mutating func addContent(_ counts: ContentCounts, date: Date) {
+        content[Int((date.timeIntervalSince1970 / 86_400).rounded(.down)), default: ContentCounts()] += counts
+    }
+
+    /// Content sizes of the days that start in `interval` (all when nil).
+    public func content(in interval: DateInterval? = nil) -> ContentCounts {
+        var total = ContentCounts()
+        for (day, counts) in content {
+            let start = Date(timeIntervalSince1970: Double(day) * 86_400)
+            if let interval, !(interval.start...interval.end).contains(start.addingTimeInterval(43_200)) { continue }
+            total += counts
+        }
+        return total
     }
 
     mutating func setTitle(_ title: String, provider: ProviderID, session: String, custom: Bool) {
@@ -244,7 +261,7 @@ extension UsageLedger: Codable {
         enum CodingKeys: String, CodingKey { case key = "k", counts = "c" }
     }
 
-    enum CodingKeys: String, CodingKey { case version, buckets, sessions, titles }
+    enum CodingKeys: String, CodingKey { case version, buckets, sessions, titles, content }
 
     static let version = 1
 
@@ -256,6 +273,7 @@ extension UsageLedger: Codable {
         for row in try c.decode([Row].self, forKey: .buckets) { buckets[row.key, default: .zero] += row.counts }
         for session in try c.decode([SessionSummary].self, forKey: .sessions) { sessions[session.id] = session }
         titles = try c.decode([String: SessionTitle].self, forKey: .titles)
+        content = try c.decodeIfPresent([Int: ContentCounts].self, forKey: .content) ?? [:]
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -266,5 +284,6 @@ extension UsageLedger: Codable {
         try c.encode(rows, forKey: .buckets)
         try c.encode(sessions.values.sorted { $0.start < $1.start }, forKey: .sessions)
         try c.encode(titles, forKey: .titles)
+        try c.encode(content, forKey: .content)
     }
 }

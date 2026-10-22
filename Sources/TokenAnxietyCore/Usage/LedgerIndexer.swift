@@ -25,6 +25,8 @@ public final class LedgerIndexer: @unchecked Sendable {
         var inode: UInt64
         var offset: UInt64
         var codex: CodexLogReader.FileState?
+        /// How far the content was measured (Claude Code only; nil: not yet).
+        var contentOffset: UInt64?
     }
 
     private let directory: URL?
@@ -40,6 +42,9 @@ public final class LedgerIndexer: @unchecked Sendable {
     private var seen = Set<UInt64>()
     private var recent: [UInt64: UsageEvent] = [:]
     private var messageKeys: [String: UInt64] = [:]
+    /// Tool call ids → tool names, to file the results that answer them.
+    private var toolNames: [String: String] = [:]
+    private var measuresContent = true
     private var skippedCompressed = 0
 
     /// Responses this recent may still be logged again with more output (Claude Code writes
@@ -79,6 +84,11 @@ public final class LedgerIndexer: @unchecked Sendable {
         }
     }
 
+    /// Whether to measure the conversations' content too (`ContentReader`).
+    public func setMeasuresContent(_ value: Bool) {
+        queue.async { self.measuresContent = value }
+    }
+
     /// `.jsonl.zst` files (compressed Codex history) seen but not read: macOS has no zstd.
     public var compressedFilesSkipped: Int { queue.sync { skippedCompressed } }
 
@@ -89,7 +99,13 @@ public final class LedgerIndexer: @unchecked Sendable {
         var url: URL
         var provider: ProviderID
         var start: UInt64
+        var contentStart: UInt64?
         var checkpoint: Checkpoint
+
+        var bytes: Int64 {
+            let size = checkpoint.size
+            return Int64(size - start) + Int64(contentStart.map { size - $0 } ?? 0)
+        }
     }
 
     private func updateNow(now: Date, progress: (@Sendable (Progress) -> Void)?) -> UsageLedger {
@@ -113,7 +129,7 @@ public final class LedgerIndexer: @unchecked Sendable {
             }
         }
 
-        let total = pending.reduce(Int64(0)) { $0 + Int64($1.checkpoint.size - $1.start) }
+        let total = pending.reduce(Int64(0)) { $0 + $1.bytes }
         var done: Int64 = 0
         var reported: Int64 = 0
         progress?(Progress(bytesRead: 0, bytesTotal: total))
@@ -125,7 +141,12 @@ public final class LedgerIndexer: @unchecked Sendable {
             do {
                 switch item.provider {
                 case .claude:
-                    checkpoint.offset = try readClaude(item.url, from: item.start, now: now)
+                    if item.start < checkpoint.size {
+                        checkpoint.offset = try readClaude(item.url, from: item.start, now: now)
+                    }
+                    if let contentStart = item.contentStart, contentStart < checkpoint.size {
+                        checkpoint.contentOffset = try readClaudeContent(item.url, from: contentStart)
+                    }
                 default:
                     var state = item.start == 0 ? CodexLogReader.FileState() : (checkpoint.codex ?? .init())
                     checkpoint.offset = try readCodex(item.url, from: item.start, state: &state, now: now)
@@ -136,7 +157,7 @@ public final class LedgerIndexer: @unchecked Sendable {
             } catch {
                 Log.debug("usage: could not read \(item.url.lastPathComponent): \(error.localizedDescription)")
             }
-            done += Int64(item.checkpoint.size - item.start)
+            done += item.bytes
             if done - reported > 16 << 20 {
                 reported = done
                 progress?(Progress(bytesRead: done, bytesTotal: total))
@@ -161,21 +182,30 @@ public final class LedgerIndexer: @unchecked Sendable {
         let size = UInt64(max(0, info.st_size))
         let modified = Double(info.st_mtimespec.tv_sec) + Double(info.st_mtimespec.tv_nsec) / 1e9
         let inode = UInt64(info.st_ino)
+        let measured = provider == .claude && measuresContent
         var start: UInt64 = 0
+        var contentStart: UInt64? = measured ? 0 : nil
         var codex: CodexLogReader.FileState?
-        if let old = files[key], old.inode == inode, size >= old.offset {
-            if size == old.offset, old.modified == modified { return }
-            start = old.offset
-            codex = old.codex
-        }
+        var contentOffset: UInt64?
         // A file that shrank or was replaced is read again from the start: the keys
         // already counted keep its old lines from counting twice.
-        guard size > start else {
-            files[key] = Checkpoint(size: size, modified: modified, inode: inode, offset: size, codex: codex)
+        if let old = files[key], old.inode == inode, size >= old.offset {
+            start = old.offset
+            codex = old.codex
+            contentOffset = old.contentOffset
+            if measured { contentStart = min(old.contentOffset ?? 0, size) }
+        }
+        let tokensDone = start >= size
+        let contentDone = contentStart.map { $0 >= size } ?? true
+        guard !tokensDone || !contentDone else {
+            files[key] = Checkpoint(size: size, modified: modified, inode: inode, offset: start, codex: codex,
+                                    contentOffset: contentOffset)
             return
         }
         pending.append(Pending(key: key, url: url, provider: provider, start: start,
-                               checkpoint: Checkpoint(size: size, modified: modified, inode: inode, offset: start, codex: codex)))
+                               contentStart: contentDone ? nil : contentStart,
+                               checkpoint: Checkpoint(size: size, modified: modified, inode: inode, offset: start,
+                                                      codex: codex, contentOffset: contentOffset)))
     }
 
     static func logFiles(in root: URL, compressed: inout Int) -> [URL] {
@@ -274,6 +304,22 @@ public final class LedgerIndexer: @unchecked Sendable {
         // then only the last few hours.
         recent[key] = event
         ledger.add(event)
+    }
+
+    /// Content sizes, read apart from the tokens so a history read before can be measured later.
+    private func readClaudeContent(_ url: URL, from offset: UInt64) throws -> UInt64 {
+        try LogLines.read(url, from: offset) { line in
+            guard ContentReader.isCandidate(line), let parsed = ContentReader.read(Data(line)) else { return }
+            // Forked sessions copy lines with their uuid: measure each once.
+            if let uuid = parsed.uuid, !seen.insert(StableHash.of("content", uuid)).inserted { return }
+            if toolNames.count > 20_000 { toolNames = [:] } // calls whose results never came
+            for (id, name) in parsed.toolCalls { toolNames[id] = name }
+            var counts = parsed.counts
+            for (id, characters) in parsed.results {
+                counts.toolResults[ContentReader.toolName(toolNames.removeValue(forKey: id)), default: 0] += characters
+            }
+            ledger.addContent(counts, date: parsed.date)
+        }
     }
 
     /// Thread names from `session_index.jsonl` (one `{"id", "thread_name"}` per line).

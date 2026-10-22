@@ -9,6 +9,8 @@ public struct AchievementFacts: Sendable, Equatable {
     public var outputTokens = 0.0
     public var cacheReadTokens = 0.0
     public var cacheWriteTokens = 0.0
+    /// Estimated tokens of files Claude read (`Read` results).
+    public var readTokens = 0.0
     // Habits
     public var activeDays = 0.0
     public var longestStreak = 0.0
@@ -138,6 +140,8 @@ public struct AchievementFacts: Sendable, Equatable {
                 months[key.provider, default: [:]][month, default: 0] += totals.cost
             }
         }
+
+        facts.readTokens = ContentCounts.tokens(ledger.content.values.reduce(0) { $0 + ($1.toolResults["Read"] ?? 0) })
 
         // Days
         let active = days.filter { $0.value.requests > 0 }

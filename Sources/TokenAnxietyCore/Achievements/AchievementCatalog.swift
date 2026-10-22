@@ -81,6 +81,7 @@ public enum AchievementCatalog {
         make("wordsmith", .volume, "text.cursor", [2e6, 2e7, 2e8], .tokens) { $0.outputTokens },
         make("cache-reader", .volume, "memorychip", [1e8, 1e9, 1e10], .tokens) { $0.cacheReadTokens },
         make("cache-builder", .volume, "square.stack.3d.up", [1e7, 1e8, 1e9], .tokens) { $0.cacheWriteTokens },
+        make("bookworm", .volume, "books.vertical", [1e6, 1e7, 1e8], .tokens) { $0.readTokens },
         // Habits
         make("regular", .habits, "calendar", [30, 100, 365], .days) { $0.activeDays },
         make("on-a-streak", .habits, "flame", [7, 14, 30, 100], .days) { $0.longestStreak },
@@ -148,6 +149,7 @@ public extension Achievement {
         case "wordsmith": String(localized: "Wordsmith")
         case "cache-reader": String(localized: "Cache reader")
         case "cache-builder": String(localized: "Cache builder")
+        case "bookworm": String(localized: "Bookworm")
         case "regular": String(localized: "Regular")
         case "on-a-streak": String(localized: "On a streak")
         case "week-after-week": String(localized: "Week after week")
@@ -206,6 +208,7 @@ public extension Achievement {
         case "wordsmith": String(localized: "\(g) tokens written by the models.")
         case "cache-reader": String(localized: "\(g) tokens read from the cache.")
         case "cache-builder": String(localized: "\(g) tokens written to the cache.")
+        case "bookworm": String(localized: "About \(g) tokens of files read by Claude.")
         case "regular": String(localized: "Use AI on \(g) different days.")
         case "on-a-streak": String(localized: "\(g) days in a row with usage.")
         case "week-after-week": String(localized: "\(g) weeks with three active days or more.")

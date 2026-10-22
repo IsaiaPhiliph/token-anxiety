@@ -25,6 +25,10 @@ final class UsageLedgerStore {
         }
     }
 
+    func setMeasuresContent(_ value: Bool) {
+        indexer?.setMeasuresContent(value)
+    }
+
     func update() {
         guard let indexer, !running else { return }
         running = true

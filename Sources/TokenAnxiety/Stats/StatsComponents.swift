@@ -113,6 +113,7 @@ struct ActivityHeatmap: View {
     let now: Date
     let format: (Double) -> String
     var weeks = 53
+    var maxCell: CGFloat = 14
 
     var body: some View {
         let today = calendar.startOfDay(for: now)
@@ -138,7 +139,7 @@ struct ActivityHeatmap: View {
             }
         }
         .aspectRatio(CGFloat(weeks * 13 - 3) / CGFloat(7 * 13 - 3), contentMode: .fit)
-        .frame(maxWidth: CGFloat(weeks * 17 - 3))
+        .frame(maxWidth: CGFloat(weeks) * (maxCell + 3) - 3)
     }
 
     /// Quartiles of the active days, so a few huge days do not wash out the rest.

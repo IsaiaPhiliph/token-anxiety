@@ -2,7 +2,7 @@ import SwiftUI
 import TokenAnxietyCore
 
 enum StatsSection: String, CaseIterable, Identifiable {
-    case overview, days, hours, projects, models, sessions, achievements
+    case overview, days, hours, projects, models, sessions, content, achievements, advice
 
     var id: String { rawValue }
 
@@ -14,7 +14,9 @@ enum StatsSection: String, CaseIterable, Identifiable {
         case .projects: String(localized: "Projects")
         case .models: String(localized: "Models")
         case .sessions: String(localized: "Sessions")
+        case .content: String(localized: "Content")
         case .achievements: String(localized: "Achievements")
+        case .advice: String(localized: "Advice")
         }
     }
 
@@ -26,7 +28,9 @@ enum StatsSection: String, CaseIterable, Identifiable {
         case .projects: "folder"
         case .models: "cpu"
         case .sessions: "bubble.left.and.text.bubble.right"
+        case .content: "text.page"
         case .achievements: "trophy"
+        case .advice: "lightbulb"
         }
     }
 }
@@ -34,6 +38,7 @@ enum StatsSection: String, CaseIterable, Identifiable {
 @MainActor @Observable
 final class StatsNavigation {
     var section: StatsSection = .overview
+    var sharing = false
 }
 
 enum StatsMetric: String, CaseIterable, Identifiable {
@@ -153,6 +158,10 @@ struct StatsView: View {
                     .help("Service")
                 }
                 ToolbarItem {
+                    Button("Share card", systemImage: "square.and.arrow.up") { navigation.sharing = true }
+                        .help("Make a share card")
+                }
+                ToolbarItem {
                     Toggle(isOn: Binding(get: { metric == .cost }, set: { metric = $0 ? .cost : .tokens })) {
                         Label("Show API cost", systemImage: "dollarsign")
                     }
@@ -162,7 +171,10 @@ struct StatsView: View {
             }
         }
         .environment(\.locale, Fmt.locale)
-        .frame(minWidth: 820, minHeight: 560)
+        .frame(minWidth: 860, minHeight: 560)
+        .sheet(isPresented: $navigation.sharing) {
+            ShareSheet(store: store) { navigation.sharing = false }
+        }
     }
 
     @ViewBuilder
@@ -173,6 +185,8 @@ struct StatsView: View {
             }
             if navigation.section == .achievements {
                 scrolling { AchievementsSection(store: store.achievements) }
+            } else if navigation.section == .advice {
+                scrolling { AdviceSection(store: store) }
             } else if scope.ledger.isEmpty {
                 ContentUnavailableView {
                     Label(usage.lastUpdate == nil ? String(localized: "Reading your history…") : String(localized: "No local usage yet"),
@@ -188,7 +202,8 @@ struct StatsView: View {
                 case .projects: ProjectsSection(scope: scope)
                 case .models: scrolling { ModelsSection(scope: scope) }
                 case .sessions: SessionsSection(scope: scope)
-                case .achievements: EmptyView()
+                case .content: scrolling { ContentSection(scope: scope, measuring: store.settings.measureContent) }
+                case .achievements, .advice: EmptyView()
                 }
             }
         }

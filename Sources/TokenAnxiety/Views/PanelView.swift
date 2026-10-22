@@ -34,7 +34,8 @@ struct PanelView: View {
                     }
                     ProviderSection(id: id, entry: store.entries[id] ?? .init(), settings: settings,
                                     history: store.history, now: now, retry: actions.refresh,
-                                    stale: store.isStale(id, now: now), today: today(id, now: now))
+                                    stale: store.isStale(id, now: now), today: today(id, now: now),
+                                    contexts: id == .claude ? ContextGauge.live(in: store.usage.ledger, now: now) : [])
                 }
             }
             footer(now: now)

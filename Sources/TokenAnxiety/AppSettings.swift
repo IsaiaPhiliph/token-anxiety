@@ -34,6 +34,8 @@ final class AppSettings {
     var notificationsEnabled: Bool { didSet { defaults.set(notificationsEnabled, forKey: "notificationsEnabled"); changed("notificationsEnabled") } }
     var warnThreshold: Int { didSet { defaults.set(warnThreshold, forKey: "warnThreshold"); changed("warnThreshold") } }
     var criticalThreshold: Int { didSet { defaults.set(criticalThreshold, forKey: "criticalThreshold"); changed("criticalThreshold") } }
+    /// Measure the size of prompts, tool results and replies in Claude Code's logs.
+    var measureContent: Bool { didSet { defaults.set(measureContent, forKey: "measureContent"); changed("measureContent") } }
     var notifyRenewals: Bool { didSet { defaults.set(notifyRenewals, forKey: "notifyRenewals"); changed("notifyRenewals") } }
     /// Read by `ClaudeProvider` itself, which renews Claude Code's session when it expires.
     var renewClaudeSession: Bool { didSet { defaults.set(renewClaudeSession, forKey: ClaudeProvider.renewalDefaultsKey); changed(ClaudeProvider.renewalDefaultsKey) } }
@@ -55,6 +57,7 @@ final class AppSettings {
             "warnThreshold": 80,
             "criticalThreshold": 95,
             "notifyRenewals": true,
+            "measureContent": true,
             ClaudeProvider.renewalDefaultsKey: true,
             "disabledProviders": [String](),
             // Cursor only has a monthly figure, so it starts in the panel only.
@@ -70,6 +73,7 @@ final class AppSettings {
         warnThreshold = defaults.integer(forKey: "warnThreshold")
         criticalThreshold = defaults.integer(forKey: "criticalThreshold")
         notifyRenewals = defaults.bool(forKey: "notifyRenewals")
+        measureContent = defaults.bool(forKey: "measureContent")
         renewClaudeSession = defaults.bool(forKey: ClaudeProvider.renewalDefaultsKey)
         disabled = Set(defaults.stringArray(forKey: "disabledProviders") ?? [])
         hiddenInMenuBar = Set(defaults.stringArray(forKey: "hiddenInMenuBar") ?? [])
