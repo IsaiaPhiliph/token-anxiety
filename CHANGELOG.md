@@ -6,9 +6,15 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ### Added
 
+- A local usage history: tokens, an API-equivalent cost estimate, projects, models and sessions read from Claude Code's and Codex's own logs, kept by the app so it outlives their cleanup. `--print --stats` prints it.
+- When Codex cannot be reached, its quota comes from the windows it last wrote in its logs.
 - English, alongside Spanish: the app follows the Mac's language, and dates and numbers its region.
 - Settings › Alerts says when macOS blocks the app's notifications or keeps them off screen, with a button to fix it.
 - Renewals of Claude Code's session are written to the system log.
+
+### Changed
+
+- After a 429, a service is asked again when its `Retry-After` says, or after 5 minutes (it was always 10).
 
 ### Fixed
 

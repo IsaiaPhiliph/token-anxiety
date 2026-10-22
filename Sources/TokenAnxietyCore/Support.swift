@@ -125,9 +125,14 @@ public func withDeadline<T: Sendable>(_ seconds: Double, onTimeout: @escaping @S
 }
 
 public enum HTTP {
-    /// Sends the request and parses a JSON body; any non-2xx status throws `ProviderError.http`.
+    /// Sends the request and parses a JSON body; a 429 throws `ProviderError.rateLimited`
+    /// and any other non-2xx status `ProviderError.http`.
     public static func json(_ request: URLRequest, session: URLSession = .shared) async throws -> JSONValue {
-        let (data, status) = try await send(request, session: session)
+        let (data, response) = try await exchange(request, session: session)
+        let status = response?.statusCode ?? 0
+        if status == 429 {
+            throw ProviderError.rateLimited(retryAfter: retryAfter(response?.value(forHTTPHeaderField: "Retry-After")))
+        }
         guard (200..<300).contains(status) else { throw ProviderError.http(status) }
         do {
             return try JSONValue.parse(data)
@@ -137,11 +142,28 @@ public enum HTTP {
     }
 
     public static func send(_ request: URLRequest, session: URLSession = .shared) async throws -> (Data, Int) {
+        let (data, response) = try await exchange(request, session: session)
+        return (data, response?.statusCode ?? 0)
+    }
+
+    /// Seconds to wait from a `Retry-After` header, which holds either seconds or an HTTP date.
+    public static func retryAfter(_ value: String?, now: Date = Date()) -> TimeInterval? {
+        guard let value = value?.trimmingCharacters(in: .whitespaces), !value.isEmpty else { return nil }
+        if let seconds = TimeInterval(value) { return seconds >= 0 ? seconds : nil }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: "GMT")
+        formatter.dateFormat = "EEE, dd MMM yyyy HH:mm:ss zzz"
+        guard let date = formatter.date(from: value) else { return nil }
+        return max(0, date.timeIntervalSince(now))
+    }
+
+    private static func exchange(_ request: URLRequest, session: URLSession) async throws -> (Data, HTTPURLResponse?) {
         do {
             let (data, response) = try await session.data(for: request)
-            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
-            Log.debug("\(request.httpMethod ?? "GET") \(request.url?.host() ?? "?")\(request.url?.path() ?? "") → \(status), \(data.count) bytes")
-            return (data, status)
+            let http = response as? HTTPURLResponse
+            Log.debug("\(request.httpMethod ?? "GET") \(request.url?.host() ?? "?")\(request.url?.path() ?? "") → \(http?.statusCode ?? 0), \(data.count) bytes")
+            return (data, http)
         } catch let error as URLError {
             Log.debug("\(request.url?.host() ?? "?")\(request.url?.path() ?? "") → URLError \(error.code.rawValue)")
             switch error.code {

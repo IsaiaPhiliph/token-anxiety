@@ -257,7 +257,7 @@ public actor ClaudeProvider: UsageProvider {
                 refused = refused || reason.contains("invalid_grant")
                 lastError = ProviderError.http(status)
             case 429:
-                throw ProviderError.http(429)
+                throw ProviderError.rateLimited(retryAfter: nil)
             default:
                 lastError = ProviderError.http(status) // 404 or 5xx: try the other host
             }

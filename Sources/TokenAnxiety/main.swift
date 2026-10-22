@@ -51,8 +51,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
 /// `--print`: asks every service once and prints the figures (never tokens or
 /// emails), to check detection from a terminal. `--only codex,cursor` limits it.
+/// `--print --stats [--days N]` reads the local logs instead and prints what they add up to.
 enum Doctor {
     static func run() async {
+        if CommandLine.arguments.contains("--stats") { return await stats() }
         var providers: [any UsageProvider] = [ClaudeProvider(), CodexProvider(), AntigravityProvider(), CursorProvider()]
         let arguments = CommandLine.arguments
         if let index = arguments.firstIndex(of: "--only"), index + 1 < arguments.count {
@@ -76,6 +78,57 @@ enum Doctor {
             } catch {
                 print("   error: \(error.localizedDescription)")
             }
+        }
+    }
+}
+
+extension Doctor {
+    /// Totals per day, project and model from Claude Code's and Codex's logs, read from
+    /// scratch into memory (the app's own ledger is left alone; `--store DIR` keeps one
+    /// there instead, to time later reads). Project names only, no paths.
+    static func stats() async {
+        let arguments = CommandLine.arguments
+        func value(_ flag: String) -> String? {
+            arguments.firstIndex(of: flag).flatMap { arguments.indices.contains($0 + 1) ? arguments[$0 + 1] : nil }
+        }
+        let days = value("--days").flatMap(Int.init) ?? 7
+        let indexer = LedgerIndexer(directory: value("--store").map { URL(fileURLWithPath: $0) })
+        let started = Date()
+        let ledger = await indexer.update()
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let start = calendar.date(byAdding: .day, value: -(days - 1), to: today)!
+        let interval = DateInterval(start: start, end: Date())
+        print("== Local usage, last \(days) days (read in \(String(format: "%.1f", Date().timeIntervalSince(started))) s, history since \(ledger.firstDate.map { Fmt.day($0) } ?? "–"))")
+        if indexer.compressedFilesSkipped > 0 { print("   \(indexer.compressedFilesSkipped) compressed Codex logs skipped") }
+
+        func line(_ totals: UsageTotals) -> String {
+            let c = totals.counts
+            var text = "in=\(c.input) out=\(c.output) cw=\(c.cacheWrite) cr=\(c.cacheRead) req=\(c.requests) ≈\(String(format: "$%.2f", totals.cost))"
+            if totals.unpricedTokens > 0 { text += " (+\(Fmt.tokens(Double(totals.unpricedTokens))) unpriced)" }
+            return text
+        }
+        for provider in [ProviderID.claude, .codex] {
+            let total = ledger.totals(in: interval, provider: provider)
+            guard total.counts.requests > 0 else { continue }
+            print("-- \(provider.displayName): \(Fmt.tokens(Double(total.counts.total))) tokens, \(line(total))")
+            let formatter = DateFormatter()
+            formatter.dateFormat = "yyyy-MM-dd"
+            for (day, totals) in ledger.daily(in: interval, provider: provider).sorted(by: { $0.key < $1.key }) {
+                print("   \(formatter.string(from: day))  \(line(totals))")
+            }
+            print("   projects:")
+            for (project, totals) in ledger.grouped(in: interval, provider: provider, by: \.project)
+                .sorted(by: { $0.value.counts.total > $1.value.counts.total }).prefix(10) {
+                print("     \(project): \(Fmt.tokens(Double(totals.counts.total))) ≈\(String(format: "$%.2f", totals.cost))")
+            }
+            print("   models:")
+            for (model, totals) in ledger.grouped(in: interval, provider: provider, by: { ModelNames.display($0.model) })
+                .sorted(by: { $0.value.counts.total > $1.value.counts.total }) {
+                print("     \(model): \(Fmt.tokens(Double(totals.counts.total))) ≈\(String(format: "$%.2f", totals.cost))")
+            }
+            let sessions = ledger.sessions(in: interval, provider: provider)
+            print("   sessions: \(sessions.count), with subagents: \(sessions.filter { !$0.agents.isEmpty }.count), titled: \(sessions.filter { ledger.title(of: $0) != nil }.count)")
         }
     }
 }

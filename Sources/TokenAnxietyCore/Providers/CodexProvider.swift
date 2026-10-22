@@ -6,7 +6,8 @@ import Foundation
 /// The figures come from Codex itself: `codex app-server` answers
 /// `account/rateLimits/read` over JSON-RPC and handles its own login,
 /// including renewing it. Only when no Codex binary is found does this fall
-/// back to the HTTP endpoint Codex uses, with the token in `~/.codex/auth.json`.
+/// back to the HTTP endpoint Codex uses, with the token in `~/.codex/auth.json`. When
+/// neither answers, the windows Codex itself logged last (`CodexLogReader`) stand in.
 public actor CodexProvider: UsageProvider {
     public nonisolated let id = ProviderID.codex
 
@@ -35,6 +36,18 @@ public actor CodexProvider: UsageProvider {
         guard FileManager.default.isFile(authFile) else {
             throw ProviderError.notLoggedIn(String(localized: "Sign in to Codex with your ChatGPT account."))
         }
+        do {
+            return try await fetchLive()
+        } catch let error as ProviderError where error.needsUser {
+            throw error
+        } catch {
+            guard let limits = CodexLogReader.latestRateLimits(codexHome: codexHome) else { throw error }
+            Log.debug("codex: \(error.localizedDescription); using the limits logged at \(limits.observedAt)")
+            return Self.snapshot(logLimits: limits)
+        }
+    }
+
+    private func fetchLive() async throws -> ProviderSnapshot {
         if let binary = findBinary() {
             do {
                 return try await fetchViaAppServer(binary)
@@ -199,6 +212,21 @@ public actor CodexProvider: UsageProvider {
         return ProviderSnapshot(provider: .codex, plan: plan, account: account?["account"]?["email"]?.string,
                                 windows: windows, facts: facts, dailyTokens: daily.sorted { $0.day < $1.day },
                                 fetchedAt: now)
+    }
+
+    /// The windows from Codex's own logs, as of when it wrote them. One that has reset since
+    /// shows as empty: any use after the reset would have logged newer figures.
+    static func snapshot(logLimits limits: CodexLogReader.RateLimits, now: Date = Date()) -> ProviderSnapshot {
+        var windows: [UsageWindow] = []
+        for (slot, value) in [("primary", limits.primary), ("secondary", limits.secondary)] {
+            guard let value else { continue }
+            let reset = value.resetsAt.map { $0 <= now } ?? false
+            windows.append(window(id: slot, prefix: nil, used: reset ? 0 : value.usedPercent,
+                                  minutes: value.windowMinutes, resetsAt: reset ? nil : value.resetsAt))
+        }
+        let source = Fact(String(localized: "From Codex's logs"), Fmt.ago(limits.observedAt, now: now), symbol: "doc.text")
+        return ProviderSnapshot(provider: .codex, plan: planName(limits.planType), windows: windows,
+                                facts: [source], fetchedAt: limits.observedAt)
     }
 
     private static func rpcWindow(_ value: JSONValue, id: String, prefix: String?) -> UsageWindow? {

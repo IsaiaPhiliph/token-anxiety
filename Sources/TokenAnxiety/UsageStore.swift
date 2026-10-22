@@ -21,6 +21,8 @@ final class UsageStore {
 
     let settings: AppSettings
     let demo: Bool
+    /// Tokens, projects and sessions from the local logs, beside the quotas.
+    let usage: UsageLedgerStore
     @ObservationIgnored private let providers: [ProviderID: any UsageProvider]
     @ObservationIgnored private let notifier: Notifier
     @ObservationIgnored private var alerts = AlertTracker()
@@ -32,6 +34,7 @@ final class UsageStore {
         self.settings = settings
         self.notifier = notifier
         self.demo = demo
+        usage = UsageLedgerStore(demo: demo)
         if demo {
             providers = Dictionary(uniqueKeysWithValues: ProviderID.allCases.map { ($0, DemoProvider($0) as any UsageProvider) })
             history = Demo.history()
@@ -112,6 +115,9 @@ final class UsageStore {
         Task { await refresh(manual: false) }
     }
 
+    /// How long to leave a service alone after a 429 that does not say.
+    nonisolated static let rateLimitPause: TimeInterval = 5 * 60
+
     /// Longer than any provider's own timeouts (a Keychain prompt waits 60 s).
     nonisolated static let fetchDeadline: Double = 90
 
@@ -158,6 +164,8 @@ final class UsageStore {
         lastRefresh = Date()
         isRefreshing = false
         save()
+        // On its own queue: the logs never hold up the quotas.
+        usage.update()
     }
 
     private func apply(_ id: ProviderID, installed: Bool, result: Result<ProviderSnapshot, ProviderError>?) {
@@ -176,7 +184,10 @@ final class UsageStore {
             if settings.notificationsEnabled, !demo { notifier.post(events) }
         case .failure(let error):
             entry.error = error
-            if case .http(429) = error { pausedUntil[id] = Date().addingTimeInterval(10 * 60) }
+            if case .rateLimited(let retryAfter) = error {
+                // The service's own Retry-After, kept between half a minute and an hour.
+                pausedUntil[id] = Date().addingTimeInterval(min(max(retryAfter ?? Self.rateLimitPause, 30), 3600))
+            }
         case nil:
             entry.error = nil
         }

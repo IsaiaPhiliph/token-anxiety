@@ -97,6 +97,7 @@
 "1 day in a row" = "1 día seguido";
 "%lld days in a row" = "%lld días seguidos";
 "Lifetime tokens" = "Tokens desde siempre";
+"From Codex's logs" = "Según los registros de Codex";
 "Month" = "Mes";
 "Codex quit without answering." = "Codex se ha cerrado sin responder.";
 "Could not start Codex: %@" = "No se pudo arrancar Codex: %@";

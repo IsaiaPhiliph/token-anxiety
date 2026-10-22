@@ -8,6 +8,7 @@ A macOS menu bar app (AppKit + SwiftUI, macOS 26+, Swift 6 language mode) that s
   - `Providers/`: one actor per service, conforming to `UsageProvider` (`isInstalled()`, `fetch() -> ProviderSnapshot`). Each has static parsers (`snapshot(...)`) that the tests feed with sample JSON.
   - `Models.swift`: `ProviderSnapshot` (`primary` is the five-hour figure, `secondary` the week), `UsageWindow`, `ProviderError` (Spanish messages; `needsUser` errors are not auto-retried).
   - `Pace.swift`, `History.swift` (`HistoryLog`, `AlertTracker`), `Formatting.swift` (`Fmt`, Spanish formats), `Demo.swift` (`--demo` data).
+  - `Usage/`: the local usage history. `LedgerIndexer` reads Claude Code's and Codex's logs (`ClaudeLogReader`, `CodexLogReader`) into a `UsageLedger` (hourly buckets by provider, project, model, price tier and effort, plus `SessionSummary`s), saved in `~/Library/Application Support/TokenAnxiety/usage/usage.json` together with each file's checkpoint and the keys of the responses counted. `Pricing` (API prices, checked by hand: `Pricing.checked`), `ModelNames`, `ProjectNames` (cwd → repository, worktrees folded).
 - `Sources/TokenAnxiety`: the app. `UsageStore` polls the providers, `StatusItemController` + `MenuBarRenderer` draw the status item, `PanelController` hosts `PanelView` in a borderless `NSGlassEffectView` panel, `Views/SettingsView` is the settings window.
 - `scripts/build-app.sh` assembles and ad-hoc signs `build/Token Anxiety.app` (`--open [args]`, `--install`, `CONFIG=debug`). `scripts/make-icon.swift` draws the icon. `scripts/backdrop.swift` puts a plain gradient behind the panel for screenshots. `scripts/check-strings.py` checks a translation against the texts in the code.
 
@@ -16,6 +17,7 @@ A macOS menu bar app (AppKit + SwiftUI, macOS 26+, Swift 6 language mode) that s
 - `swift build`, `swift test` (Swift Testing, runs in milliseconds).
 - `CONFIG=debug scripts/build-app.sh --open --demo --open-panel` to look at the UI with sample data.
 - `"build/Token Anxiety.app/Contents/MacOS/TokenAnxiety" --print --debug`: fetches every provider once against the real services and prints figures and steps (`--only antigravity,cursor` limits it; leave Claude out when repeating, it answers 429 to bursts). Never log tokens, emails or other secrets in `Log.debug`.
+- `--print --stats [--days N] [--store DIR]` reads the local logs instead (in memory unless `--store`) and prints tokens and ≈ cost per day, project and model. Check changes to the log readers against an independent tally of the same files (per day: requests, input, output, cache write, cache read).
 
 ## Data sources and pitfalls
 
@@ -23,6 +25,9 @@ A macOS menu bar app (AppKit + SwiftUI, macOS 26+, Swift 6 language mode) that s
 - **Codex**: `codex app-server` over stdio, newline-delimited JSON-RPC without the `jsonrpc` field: `initialize`, `initialized`, `account/read`, `account/rateLimits/read`, `account/usage/read`. Prefer `/Applications/Codex.app/Contents/Resources/codex` (kept up to date by the desktop app). `codex app-server generate-json-schema --out DIR` prints the protocol. Free plans have a monthly window.
 - **Antigravity**: its `language_server_macos*` process has `--csrf_token` on its command line; find its ports with `lsof`, POST `GetUserStatus` (Connect JSON, self-signed TLS on 127.0.0.1). Proto JSON omits zero values: no `remainingFraction` means 0 left. Several servers can run; variants like "(Low)/(High)" share one quota.
 - **Cursor**: `state.vscdb` (SQLite). With Cursor closed a read-only WAL open fails with SQLITE_CANTOPEN; it is retried with `immutable=1`. Usage: `cursor.com/api/usage-summary` with cookie `WorkosCursorSessionToken=<userId>%3A%3A<accessToken>` (amounts in cents).
+
+- **Claude Code transcripts** (`projects/**/*.jsonl` under `CLAUDE_CONFIG_DIR` and `~/.claude`): every response is an `assistant` line with `message.usage`. One response is written once per content block and again as its output grows (same `message.id` + `requestId`): count it once, keeping the largest figures (on the user's Mac, 47 k lines were 17 k responses). Forked or resumed sessions copy old lines into new files, so the counted keys are kept for good. Subagents live in `<session>/subagents/agent-*.jsonl` with the parent's `sessionId`, `isSidechain` and `agentId`. Titles come from `custom-title` and `agent-name` lines. Claude Code deletes transcripts after `cleanupPeriodDays` (30 by default), which is why the ledger keeps its own history. `<synthetic>` responses are not model calls.
+- **Codex rollouts** (`$CODEX_HOME/sessions/YYYY/MM/DD/rollout-*.jsonl`, moved to `archived_sessions/`): `token_count` events carry `last_token_usage` (input includes the cached part) and the thread's `total_token_usage`; an event that repeats the total is the same request. Checkpoints are keyed by file name so archiving does not count twice. `parent_thread_id` marks a subagent. The newest `rate_limits` in these files stand in for the quota when the app-server and the HTTP endpoint fail.
 
 ## Checking the UI
 

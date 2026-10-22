@@ -161,6 +161,8 @@ public enum ProviderError: Error, LocalizedError, Sendable, Equatable {
     /// The service only answers while its app is open (Antigravity).
     case notRunning(String)
     case http(Int)
+    /// 429: ask again after `retryAfter` seconds, the service's `Retry-After` when it sends one.
+    case rateLimited(retryAfter: TimeInterval?)
     case network(String)
     case badResponse(String)
 
@@ -170,10 +172,12 @@ public enum ProviderError: Error, LocalizedError, Sendable, Equatable {
         case .notLoggedIn(let message), .sessionExpired(let message), .accessDenied(let message),
              .notRunning(let message), .network(let message), .badResponse(let message):
             message
+        case .rateLimited:
+            String(localized: "Too many requests in a row; trying again in a while.")
         case .http(let status):
             switch status {
             case 401, 403: String(localized: "The service rejected the session (\(status)).")
-            case 429: String(localized: "Too many requests in a row; trying again in a while.")
+            case 429: ProviderError.rateLimited(retryAfter: nil).errorDescription ?? ""
             case 500...: String(localized: "The service is not answering right now (\(status)).")
             default: String(localized: "Unexpected answer from the service (\(status)).")
             }
