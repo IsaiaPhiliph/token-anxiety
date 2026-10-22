@@ -1,0 +1,43 @@
+name: Bug report
+description: Something does not work or shows wrong figures
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. **Never paste tokens, cookies or emails.** The output of `--print --debug` is safe to share: it never prints secrets.
+  - type: dropdown
+    id: service
+    attributes:
+      label: Service
+      options: [Claude, ChatGPT / Codex, Antigravity, Cursor, The app itself]
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Diagnostics
+      description: 'Output of `"/Applications/Token Anxiety.app/Contents/MacOS/TokenAnxiety" --print --debug` (run it once: some services rate-limit bursts).'
+      render: text
+  - type: input
+    id: versions
+    attributes:
+      label: macOS and app version
+      placeholder: macOS 26.1, Token Anxiety 1.0
+    validations:
+      required: true
+  - type: input
+    id: plan
+    attributes:
+      label: Plan
+      placeholder: Claude Max 5x, ChatGPT Plus…

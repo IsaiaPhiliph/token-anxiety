@@ -1,0 +1,15 @@
+name: Feature request
+description: A new service, a new figure or an idea for the app
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What would you like to see, and why?
+    validations:
+      required: true
+  - type: textarea
+    id: source
+    attributes:
+      label: Where the data comes from
+      description: For a new service or figure, how its own app or website gets the usage (endpoint, local file…), if you know. No tokens, please.
