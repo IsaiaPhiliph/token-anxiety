@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// Runs a command-line tool and collects its output, with a timeout.
 public enum ProcessRunner {
@@ -148,9 +149,18 @@ public enum Log {
     public static let enabled = CommandLine.arguments.contains("--debug")
         || ProcessInfo.processInfo.environment["TA_DEBUG"] != nil
 
+    private static let system = Logger(subsystem: "com.tokenanxiety.app", category: "providers")
+
     public static func debug(_ message: @autoclosure () -> String) {
         guard enabled else { return }
         FileHandle.standardError.write(Data("  · \(message())\n".utf8))
+    }
+
+    /// Rare events worth finding afterwards (a Claude renewal), kept in the system log too:
+    /// `log show --predicate 'subsystem == "com.tokenanxiety.app"' --last 1d`.
+    public static func notice(_ message: String) {
+        system.notice("\(message, privacy: .public)")
+        debug(message)
     }
 }
 

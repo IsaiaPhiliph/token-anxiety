@@ -205,11 +205,13 @@ public actor ClaudeProvider: UsageProvider {
             throw error
         } catch {
             lastRenewalFailure = Date()
+            Log.notice("claude: renewal failed: \(error)")
             throw error
         }
         guard let updated = Self.renewedCredentials(stored.data, response: response),
               let parsed = Self.parseCredentials(updated) else {
             lastRenewalFailure = Date()
+            Log.notice("claude: renewal answered without an access token")
             throw ProviderError.badResponse("Anthropic ha renovado la sesión con una respuesta que no entiendo.")
         }
         // The old refresh token may be spent now: the new one must reach Claude Code's storage.
@@ -219,10 +221,10 @@ public actor ClaudeProvider: UsageProvider {
         do {
             try await write(renewed)
         } catch {
-            Log.debug("claude: renewed but not saved: \(error)")
+            Log.notice("claude: renewed but not saved: \(error)")
             throw ProviderError.badResponse("He renovado la sesión de Claude Code pero no la he podido guardar. Si Claude Code te pide entrar, haz /login.")
         }
-        Log.debug("claude: session renewed until \(parsed.expiresAt.map { "\($0)" } ?? "?")")
+        Log.notice("claude: session renewed until \(parsed.expiresAt.map { "\($0)" } ?? "?")")
         return parsed
     }
 
@@ -250,7 +252,7 @@ public actor ClaudeProvider: UsageProvider {
                 return json
             case 400, 401, 403:
                 let reason = (try? JSONValue.parse(data)).flatMap { $0["error"]?.string ?? $0["error"]?["type"]?.string } ?? "?"
-                Log.debug("claude: renewal refused (\(status), \(reason))")
+                Log.notice("claude: renewal refused (\(status), \(reason))")
                 // A refused token was not rotated, so asking the other host is harmless.
                 refused = refused || reason.contains("invalid_grant")
                 lastError = ProviderError.http(status)
@@ -270,15 +272,31 @@ public actor ClaudeProvider: UsageProvider {
             try stored.data.write(to: url, options: .atomic)
             try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
         case .keychain(let account):
-            let hex = stored.data.map { String(format: "%02x", $0) }.joined()
-            let command = "add-generic-password -U -a \"\(account)\" -s \"\(Self.keychainService)\" -X \(hex)\n"
-            _ = try await ProcessRunner.run("/usr/bin/security", ["-i"], input: Data(command.utf8), timeout: 30)
+            let (arguments, input) = Self.keychainWrite(stored.data, account: account)
+            Log.debug("claude: saving \(stored.data.count) bytes \(input == nil ? "as arguments" : "on stdin")")
+            _ = try await ProcessRunner.run("/usr/bin/security", arguments, input: input, timeout: 30)
             // `security -i` does not report failures in its exit status: read it back.
-            guard let (saved, _) = try await readKeychain(),
-                  Self.parseCredentials(saved)?.accessToken == Self.parseCredentials(stored.data)?.accessToken else {
+            guard let (saved, _) = try await readKeychain(), saved == stored.data else {
                 throw ProviderError.badResponse("keychain write not confirmed")
             }
         }
+    }
+
+    /// `security -i` reads its commands in lines of up to 4095 bytes and runs a longer
+    /// line in pieces, the first of which would save a truncated item.
+    static let interactiveLineLimit = 4095
+
+    /// How `security` saves `data` in the item: on stdin, which keeps the secret out of
+    /// `ps`, while the command fits on one line. Claude Code's item also keeps its MCP
+    /// servers' logins and soon outgrows that, so then it goes as arguments, which `ps`
+    /// shows for the moment `security` runs.
+    static func keychainWrite(_ data: Data, account: String) -> (arguments: [String], input: Data?) {
+        let hex = data.map { String(format: "%02x", $0) }.joined()
+        let line = "add-generic-password -U -a \"\(account)\" -s \"\(keychainService)\" -X \(hex)\n"
+        if line.utf8.count <= interactiveLineLimit, !account.contains("\"") {
+            return (["-i"], Data(line.utf8))
+        }
+        return (["add-generic-password", "-U", "-a", account, "-s", keychainService, "-X", hex], nil)
     }
 
     static func refreshToken(in data: Data) -> String? {

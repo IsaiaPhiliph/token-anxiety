@@ -109,7 +109,9 @@ public actor CursorProvider: UsageProvider {
         var windows: [UsageWindow] = []
         let start = DateParsing.date(usage["startOfMonth"])
         let end = start.flatMap { Calendar.current.date(byAdding: .month, value: 1, to: $0) }
-        for (model, value) in (usage.object ?? [:]).sorted(by: { $0.key < $1.key }) {
+        // Fast requests ("gpt-4") are the plan's figure; the other models follow by name.
+        func rank(_ model: String) -> (Int, String) { (model == "gpt-4" ? 0 : 1, model) }
+        for (model, value) in (usage.object ?? [:]).sorted(by: { rank($0.key) < rank($1.key) }) {
             guard let requests = value["numRequests"]?.double, let max = value["maxRequestUsage"]?.double, max > 0 else { continue }
             windows.append(UsageWindow(id: model, label: model == "gpt-4" ? "Peticiones rápidas" : model,
                                        kind: windows.isEmpty ? .monthly : .other, usedPercent: requests / max * 100,

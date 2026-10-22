@@ -70,6 +70,35 @@ private func json(_ text: String) -> JSONValue {
         """
         #expect(ClaudeProvider.accountAttribute(output) == "pablo")
     }
+
+    @Test func shortCredentialsAreSavedThroughStdin() throws {
+        let data = Data(#"{"claudeAiOauth":{"accessToken":"secret"}}"#.utf8)
+        let (arguments, input) = ClaudeProvider.keychainWrite(data, account: "pablo")
+        #expect(arguments == ["-i"])
+        let line = String(decoding: try #require(input), as: UTF8.self)
+        #expect(line == "add-generic-password -U -a \"pablo\" -s \"Claude Code-credentials\" -X \(hex(data))\n")
+    }
+
+    /// `security -i` runs a longer line in pieces, and the first piece would save a
+    /// truncated item: Claude Code would lose its login and its MCP servers' logins.
+    @Test func longCredentialsAreSavedAsArguments() {
+        let data = Data(repeating: UInt8(ascii: "x"), count: 5_664) // a real item with MCP logins
+        let (arguments, input) = ClaudeProvider.keychainWrite(data, account: "pablo")
+        #expect(input == nil)
+        #expect(arguments == ["add-generic-password", "-U", "-a", "pablo", "-s", "Claude Code-credentials", "-X", hex(data)])
+    }
+
+    @Test func stdinLinesFitSecuritysBuffer() {
+        let lines = (1_990...2_030).map { size in
+            ClaudeProvider.keychainWrite(Data(count: size), account: "pablo").input?.count
+        }
+        #expect(lines.contains(nil) && lines.contains { $0 != nil }) // the sizes cross the limit
+        #expect(lines.allSatisfy { ($0 ?? 0) <= 4_095 })
+    }
+}
+
+private func hex(_ data: Data) -> String {
+    data.map { String(format: "%02x", $0) }.joined()
 }
 
 @Suite struct CodexTests {
@@ -165,6 +194,22 @@ private func json(_ text: String) -> JSONValue {
         #expect(snapshot.primary?.detail?.contains("8,20") == true)
         #expect(snapshot.windows.map(\.id) == ["plan", "auto", "api"])
         #expect(snapshot.facts.first?.label == "Bajo demanda")
+    }
+
+    @Test func parsesTheLegacyUsage() {
+        let usage = json(#"""
+        {"gpt-3.5-turbo":{"numRequests":12,"numRequestsTotal":12,"numTokens":0,"maxRequestUsage":200,"maxTokenUsage":null},
+         "gpt-4":{"numRequests":120,"numRequestsTotal":130,"numTokens":5,"maxRequestUsage":500,"maxTokenUsage":null},
+         "gpt-4-32k":{"numRequests":0,"numRequestsTotal":0,"numTokens":0,"maxRequestUsage":null,"maxTokenUsage":null},
+         "startOfMonth":"2026-10-04T18:33:16.000Z"}
+        """#)
+        let snapshot = CursorProvider.snapshot(legacy: usage, membership: "pro", email: nil)
+        #expect(snapshot.plan == "Pro")
+        #expect(snapshot.windows.map(\.id) == ["gpt-4", "gpt-3.5-turbo"]) // fast requests first, whatever the names
+        #expect(snapshot.primary?.label == "Peticiones rápidas")
+        #expect(snapshot.primary?.usedPercent == 24)
+        #expect(snapshot.primary?.detail == "120 de 500 peticiones")
+        #expect(snapshot.primary?.resetsAt != nil)
     }
 }
 
