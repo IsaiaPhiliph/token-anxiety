@@ -15,7 +15,7 @@ A macOS menu bar app (AppKit + SwiftUI, macOS 26+, Swift 6 language mode) that s
 
 - `swift build`, `swift test` (Swift Testing, runs in milliseconds).
 - `CONFIG=debug scripts/build-app.sh --open --demo --open-panel` to look at the UI with sample data.
-- `"build/Token Anxiety.app/Contents/MacOS/TokenAnxiety" --print --debug`: fetches every provider once against the real services and prints figures and steps. Never log tokens, emails or other secrets in `Log.debug`.
+- `"build/Token Anxiety.app/Contents/MacOS/TokenAnxiety" --print --debug`: fetches every provider once against the real services and prints figures and steps (`--only antigravity,cursor` limits it; leave Claude out when repeating, it answers 429 to bursts). Never log tokens, emails or other secrets in `Log.debug`.
 
 ## Data sources and pitfalls
 

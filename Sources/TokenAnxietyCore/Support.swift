@@ -37,10 +37,15 @@ public enum ProcessRunner {
 
         let box = Box(process: process)
         return try await withCheckedThrowingContinuation { continuation in
+            // Resumed once: by the tool's exit or by the timeout, whichever comes first.
+            let finish = Locked<CheckedContinuation<Output, Error>?>(continuation)
+            let resume = { @Sendable (result: Result<Output, Error>) in
+                finish.withLock { pending in defer { pending = nil }; return pending }?.resume(with: result)
+            }
             do {
                 try process.run()
             } catch {
-                continuation.resume(throwing: ProviderError.badResponse(String(localized: "Could not run \(path): \(error.localizedDescription)")))
+                resume(.failure(ProviderError.badResponse(String(localized: "Could not run \(path): \(error.localizedDescription)"))))
                 return
             }
             if let input {
@@ -48,9 +53,13 @@ public enum ProcessRunner {
                 try? stdin.fileHandleForWriting.close()
             }
             DispatchQueue.global().asyncAfter(deadline: .now() + timeout) {
-                if box.process.isRunning {
-                    box.timedOut.withLock { $0 = true }
-                    box.process.terminate()
+                guard box.process.isRunning else { return }
+                box.process.terminate()
+                // A tool stuck in the kernel ignores SIGTERM and may never close its pipes:
+                // answer now instead of waiting for it.
+                resume(.failure(ProviderError.network(String(localized: "\((path as NSString).lastPathComponent) took too long to answer."))))
+                DispatchQueue.global().asyncAfter(deadline: .now() + 2) {
+                    if box.process.isRunning { kill(box.process.processIdentifier, SIGKILL) }
                 }
             }
             DispatchQueue.global().async {
@@ -66,20 +75,14 @@ public enum ProcessRunner {
                 err.withLock { $0 = stderr.fileHandleForReading.readDataToEndOfFile() }
                 group.wait()
                 box.process.waitUntilExit()
-                if box.timedOut.withLock({ $0 }) {
-                    continuation.resume(throwing: ProviderError.network(String(localized: "\((path as NSString).lastPathComponent) took too long to answer.")))
-                } else {
-                    continuation.resume(returning: Output(status: box.process.terminationStatus,
-                                                          stdout: out.withLock { $0 },
-                                                          stderr: err.withLock { $0 }))
-                }
+                resume(.success(Output(status: box.process.terminationStatus,
+                                       stdout: out.withLock { $0 }, stderr: err.withLock { $0 })))
             }
         }
     }
 
     private final class Box: @unchecked Sendable {
         let process: Process
-        let timedOut = Locked(false)
         init(process: Process) { self.process = process }
     }
 }
@@ -96,6 +99,28 @@ public final class Locked<Value>: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         return try body(&value)
+    }
+}
+
+/// Runs `work` but gives up after `seconds`, answering `onTimeout()` instead. Unlike a
+/// task group, it does not wait for work that ignores cancellation: that work is
+/// cancelled and left to finish on its own, and its late answer is dropped.
+public func withDeadline<T: Sendable>(_ seconds: Double, onTimeout: @escaping @Sendable () -> T,
+                                      _ work: @escaping @Sendable () async -> T) async -> T {
+    let pending = Locked<CheckedContinuation<T, Never>?>(nil)
+    let take = { @Sendable in pending.withLock { continuation in defer { continuation = nil }; return continuation } }
+    return await withCheckedContinuation { continuation in
+        pending.withLock { $0 = continuation }
+        let worker = Task {
+            let value = await work()
+            take()?.resume(returning: value)
+        }
+        Task {
+            try? await Task.sleep(for: .seconds(seconds))
+            guard let continuation = take() else { return }
+            worker.cancel()
+            continuation.resume(returning: onTimeout())
+        }
     }
 }
 

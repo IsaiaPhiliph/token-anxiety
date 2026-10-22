@@ -45,7 +45,8 @@ public actor AntigravityProvider: UsageProvider {
         // Antigravity can run more than one server (windows, the IDE build); any of them answers.
         var lastError: Error = ProviderError.notRunning(String(localized: "Antigravity is starting; checking again in a moment."))
         for server in servers {
-            let lsof = try await ProcessRunner.run("/usr/sbin/lsof", ["-nP", "-a", "-p", String(server.pid), "-iTCP", "-sTCP:LISTEN", "-Fn"])
+            // -b -w: never stat mounted volumes, where lsof can block in the kernel for good.
+            let lsof = try await ProcessRunner.run("/usr/sbin/lsof", ["-b", "-w", "-nP", "-a", "-p", String(server.pid), "-iTCP", "-sTCP:LISTEN", "-Fn"], timeout: 5)
             var ports = Self.listeningPorts(in: lsof.text)
             if let extensionPort = server.extensionPort { ports.removeAll { $0 == extensionPort }; ports.append(extensionPort) }
             Log.debug("antigravity: pid \(server.pid), ports \(ports)")

@@ -50,14 +50,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 /// `--print`: asks every service once and prints the figures (never tokens or
-/// emails), to check detection from a terminal.
+/// emails), to check detection from a terminal. `--only codex,cursor` limits it.
 enum Doctor {
     static func run() async {
-        let providers: [any UsageProvider] = [ClaudeProvider(), CodexProvider(), AntigravityProvider(), CursorProvider()]
+        var providers: [any UsageProvider] = [ClaudeProvider(), CodexProvider(), AntigravityProvider(), CursorProvider()]
+        let arguments = CommandLine.arguments
+        if let index = arguments.firstIndex(of: "--only"), index + 1 < arguments.count {
+            let wanted = arguments[index + 1].split(separator: ",").map(String.init)
+            providers.removeAll { !wanted.contains($0.id.rawValue) }
+        }
         for provider in providers {
             let installed = await provider.isInstalled()
             print("== \(provider.id.displayName): \(installed ? "found" : "not found")")
             guard installed else { continue }
+            let start = Date()
+            defer { Log.debug("\(provider.id.rawValue): \(String(format: "%.1f", Date().timeIntervalSince(start))) s") }
             do {
                 let snapshot = try await provider.fetch()
                 print("   plan: \(snapshot.plan ?? "–")")

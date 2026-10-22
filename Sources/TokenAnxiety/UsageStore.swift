@@ -112,6 +112,9 @@ final class UsageStore {
         Task { await refresh(manual: false) }
     }
 
+    /// Longer than any provider's own timeouts (a Keychain prompt waits 60 s).
+    nonisolated static let fetchDeadline: Double = 90
+
     func refresh(manual: Bool) async {
         guard !isRefreshing else { return }
         isRefreshing = true
@@ -131,13 +134,19 @@ final class UsageStore {
         await withTaskGroup(of: (ProviderID, Bool, Result<ProviderSnapshot, ProviderError>?).self) { group in
             for (id, provider) in jobs {
                 group.addTask {
-                    guard await provider.isInstalled() else { return (id, false, nil) }
-                    do {
-                        return (id, true, .success(try await provider.fetch()))
-                    } catch let error as ProviderError {
-                        return (id, true, .failure(error))
-                    } catch {
-                        return (id, true, .failure(.badResponse(error.localizedDescription)))
+                    // One stuck service (Antigravity while it quits…) must not hold up the others'
+                    // next refresh: each gets a deadline and the round ends on time.
+                    await withDeadline(Self.fetchDeadline, onTimeout: {
+                        (id, true, .failure(.network(String(localized: "\(id.displayName) took too long to answer."))))
+                    }) {
+                        guard await provider.isInstalled() else { return (id, false, nil) }
+                        do {
+                            return (id, true, .success(try await provider.fetch()))
+                        } catch let error as ProviderError {
+                            return (id, true, .failure(error))
+                        } catch {
+                            return (id, true, .failure(.badResponse(error.localizedDescription)))
+                        }
                     }
                 }
             }

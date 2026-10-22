@@ -12,6 +12,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ### Fixed
 
+- Quitting Antigravity could leave the panel loading for good and stop every other service from refreshing: each service now has a deadline, and `lsof` no longer touches mounted volumes.
 - Saving a renewed Claude Code session could truncate its Keychain item when it also held MCP logins, signing Claude Code out.
 - The panel showed a square shadow behind its rounded corners.
 - Cursor's legacy usage endpoint now shows fast requests as the plan's figure.
