@@ -2,7 +2,7 @@ import SwiftUI
 import TokenAnxietyCore
 
 enum StatsSection: String, CaseIterable, Identifiable {
-    case overview, days, hours, projects, models, sessions
+    case overview, days, hours, projects, models, sessions, achievements
 
     var id: String { rawValue }
 
@@ -14,6 +14,7 @@ enum StatsSection: String, CaseIterable, Identifiable {
         case .projects: String(localized: "Projects")
         case .models: String(localized: "Models")
         case .sessions: String(localized: "Sessions")
+        case .achievements: String(localized: "Achievements")
         }
     }
 
@@ -25,6 +26,7 @@ enum StatsSection: String, CaseIterable, Identifiable {
         case .projects: "folder"
         case .models: "cpu"
         case .sessions: "bubble.left.and.text.bubble.right"
+        case .achievements: "trophy"
         }
     }
 }
@@ -123,7 +125,9 @@ struct StatsView: View {
         NavigationSplitView {
             List(selection: Binding(get: { navigation.section }, set: { if let value = $0 { navigation.section = value } })) {
                 ForEach(StatsSection.allCases) { section in
-                    Label(section.title, systemImage: section.symbol).tag(section)
+                    Label(section.title, systemImage: section.symbol)
+                        .badge(section == .achievements ? store.achievements.book.unseen.count : 0)
+                        .tag(section)
                 }
             }
             .navigationSplitViewColumnWidth(min: 170, ideal: 190, max: 240)
@@ -167,7 +171,9 @@ struct StatsView: View {
             if let progress = usage.progress {
                 ReadingBanner(progress: progress)
             }
-            if scope.ledger.isEmpty {
+            if navigation.section == .achievements {
+                scrolling { AchievementsSection(store: store.achievements) }
+            } else if scope.ledger.isEmpty {
                 ContentUnavailableView {
                     Label(usage.lastUpdate == nil ? String(localized: "Reading your history…") : String(localized: "No local usage yet"),
                           systemImage: "chart.bar.xaxis")
@@ -182,6 +188,7 @@ struct StatsView: View {
                 case .projects: ProjectsSection(scope: scope)
                 case .models: scrolling { ModelsSection(scope: scope) }
                 case .sessions: SessionsSection(scope: scope)
+                case .achievements: EmptyView()
                 }
             }
         }

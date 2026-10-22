@@ -57,6 +57,7 @@ final class PanelController {
         button.highlight(true)
         installMonitors()
         store.refreshIfStale()
+        store.achievements.panelOpened()
     }
 
     func close() {

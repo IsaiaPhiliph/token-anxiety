@@ -22,23 +22,25 @@ enum MenuStyle: String, CaseIterable, Identifiable {
 @MainActor @Observable
 final class AppSettings {
     @ObservationIgnored private let defaults: UserDefaults
+    /// Told the key of each setting the user changes (for the "Tinkerer" achievement).
+    @ObservationIgnored var onChange: ((String) -> Void)?
 
-    var menuStyle: MenuStyle { didSet { defaults.set(menuStyle.rawValue, forKey: "menuStyle") } }
-    var colorizeMenuBar: Bool { didSet { defaults.set(colorizeMenuBar, forKey: "colorizeMenuBar") } }
-    var refreshMinutes: Int { didSet { defaults.set(refreshMinutes, forKey: "refreshMinutes") } }
-    var showPace: Bool { didSet { defaults.set(showPace, forKey: "showPace") } }
-    var showAccounts: Bool { didSet { defaults.set(showAccounts, forKey: "showAccounts") } }
-    var historyEnabled: Bool { didSet { defaults.set(historyEnabled, forKey: "historyEnabled") } }
-    var notificationsEnabled: Bool { didSet { defaults.set(notificationsEnabled, forKey: "notificationsEnabled") } }
-    var warnThreshold: Int { didSet { defaults.set(warnThreshold, forKey: "warnThreshold") } }
-    var criticalThreshold: Int { didSet { defaults.set(criticalThreshold, forKey: "criticalThreshold") } }
-    var notifyRenewals: Bool { didSet { defaults.set(notifyRenewals, forKey: "notifyRenewals") } }
+    var menuStyle: MenuStyle { didSet { defaults.set(menuStyle.rawValue, forKey: "menuStyle"); changed("menuStyle") } }
+    var colorizeMenuBar: Bool { didSet { defaults.set(colorizeMenuBar, forKey: "colorizeMenuBar"); changed("colorizeMenuBar") } }
+    var refreshMinutes: Int { didSet { defaults.set(refreshMinutes, forKey: "refreshMinutes"); changed("refreshMinutes") } }
+    var showPace: Bool { didSet { defaults.set(showPace, forKey: "showPace"); changed("showPace") } }
+    var showAccounts: Bool { didSet { defaults.set(showAccounts, forKey: "showAccounts"); changed("showAccounts") } }
+    var historyEnabled: Bool { didSet { defaults.set(historyEnabled, forKey: "historyEnabled"); changed("historyEnabled") } }
+    var notificationsEnabled: Bool { didSet { defaults.set(notificationsEnabled, forKey: "notificationsEnabled"); changed("notificationsEnabled") } }
+    var warnThreshold: Int { didSet { defaults.set(warnThreshold, forKey: "warnThreshold"); changed("warnThreshold") } }
+    var criticalThreshold: Int { didSet { defaults.set(criticalThreshold, forKey: "criticalThreshold"); changed("criticalThreshold") } }
+    var notifyRenewals: Bool { didSet { defaults.set(notifyRenewals, forKey: "notifyRenewals"); changed("notifyRenewals") } }
     /// Read by `ClaudeProvider` itself, which renews Claude Code's session when it expires.
-    var renewClaudeSession: Bool { didSet { defaults.set(renewClaudeSession, forKey: ClaudeProvider.renewalDefaultsKey) } }
+    var renewClaudeSession: Bool { didSet { defaults.set(renewClaudeSession, forKey: ClaudeProvider.renewalDefaultsKey); changed(ClaudeProvider.renewalDefaultsKey) } }
     /// Services the user switched off entirely.
-    private var disabled: Set<String> { didSet { defaults.set(Array(disabled), forKey: "disabledProviders") } }
+    private var disabled: Set<String> { didSet { defaults.set(Array(disabled), forKey: "disabledProviders"); changed("disabledProviders") } }
     /// Services that stay in the panel but out of the menu bar.
-    private var hiddenInMenuBar: Set<String> { didSet { defaults.set(Array(hiddenInMenuBar), forKey: "hiddenInMenuBar") } }
+    private var hiddenInMenuBar: Set<String> { didSet { defaults.set(Array(hiddenInMenuBar), forKey: "hiddenInMenuBar"); changed("hiddenInMenuBar") } }
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -72,6 +74,8 @@ final class AppSettings {
         disabled = Set(defaults.stringArray(forKey: "disabledProviders") ?? [])
         hiddenInMenuBar = Set(defaults.stringArray(forKey: "hiddenInMenuBar") ?? [])
     }
+
+    private func changed(_ key: String) { onChange?(key) }
 
     func isEnabled(_ id: ProviderID) -> Bool { !disabled.contains(id.rawValue) }
 

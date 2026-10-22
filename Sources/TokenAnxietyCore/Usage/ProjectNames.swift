@@ -2,6 +2,10 @@ import Foundation
 
 /// Turns a working directory into the name of its project: the git repository it
 /// belongs to, so every worktree and subfolder of one repository counts as one project.
+///
+/// Folders macOS protects (Documents, Desktop, iCloud Drive, other volumes…) are never
+/// looked into: touching them makes macOS ask the user for access and blocks until they
+/// answer. There the name comes from the path alone, with the known worktree layouts folded.
 public final class ProjectNames: @unchecked Sendable {
     private let home: String
     private let cache = Locked<[String: String]>([:])
@@ -34,7 +38,7 @@ public final class ProjectNames: @unchecked Sendable {
 
     private func resolve(_ directory: String) -> String {
         let path = (directory as NSString).standardizingPath
-        if let root = repositoryRoot(containing: path) { return label(root) }
+        if !isProtected(path), let root = repositoryRoot(containing: path) { return label(root) }
         // The folder is gone (a removed worktree): fold the known worktree layouts by hand.
         return label(Self.foldWorktree(path))
     }
@@ -57,6 +61,13 @@ public final class ProjectNames: @unchecked Sendable {
             current = (current as NSString).deletingLastPathComponent
         }
         return nil
+    }
+
+    /// Places where reading a file needs the user's permission (TCC).
+    func isProtected(_ path: String) -> Bool {
+        let protected = ["Documents", "Desktop", "Downloads", "Pictures", "Movies", "Music",
+                         "Library/Mobile Documents", "Library/CloudStorage"].map { home + "/" + $0 }
+        return path.hasPrefix("/Volumes/") || protected.contains { path == $0 || path.hasPrefix($0 + "/") }
     }
 
     /// `/repo/.claude/worktrees/x/sub` → `/repo`; `~/.codex/worktrees/abcd/repo/sub` → `…/repo`.

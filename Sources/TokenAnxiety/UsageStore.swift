@@ -23,6 +23,7 @@ final class UsageStore {
     let demo: Bool
     /// Tokens, projects and sessions from the local logs, beside the quotas.
     let usage: UsageLedgerStore
+    let achievements: AchievementStore
     @ObservationIgnored private let providers: [ProviderID: any UsageProvider]
     @ObservationIgnored private let notifier: Notifier
     @ObservationIgnored private var alerts = AlertTracker()
@@ -35,6 +36,7 @@ final class UsageStore {
         self.notifier = notifier
         self.demo = demo
         usage = UsageLedgerStore(demo: demo)
+        achievements = AchievementStore(demo: demo, notifier: notifier, settings: settings)
         if demo {
             providers = Dictionary(uniqueKeysWithValues: ProviderID.allCases.map { ($0, DemoProvider($0) as any UsageProvider) })
             history = Demo.history()
@@ -47,6 +49,9 @@ final class UsageStore {
             ]
             load()
         }
+        usage.onUpdate = { [weak self] ledger in self?.achievements.ledgerUpdated(ledger) }
+        settings.onChange = { [weak self] key in self?.achievements.settingChanged(key) }
+        if demo { achievements.ledgerUpdated(usage.ledger) }
     }
 
     // MARK: What to show
@@ -179,6 +184,7 @@ final class UsageStore {
             entry.error = nil
             pausedUntil[id] = nil
             if settings.historyEnabled { history.record(snapshot) }
+            achievements.observe(snapshot)
             let events = alerts.events(for: snapshot, thresholds: settings.thresholds,
                                        notifyRenewals: settings.notifyRenewals)
             if settings.notificationsEnabled, !demo { notifier.post(events) }

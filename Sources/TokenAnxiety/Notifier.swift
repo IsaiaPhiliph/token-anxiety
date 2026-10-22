@@ -72,6 +72,18 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         }
     }
 
+    /// A notification of the app's own (achievements), grouped apart from the quota alerts.
+    func post(title: String, body: String, thread: String) {
+        guard let center else { return }
+        requestAuthorization()
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = .default
+        content.threadIdentifier = thread
+        center.add(UNNotificationRequest(identifier: "\(thread).\(UUID().uuidString)", content: content, trigger: nil))
+    }
+
     func sendTest() {
         let window = UsageWindow(id: "test", label: String(localized: "Week"), kind: .weekly, usedPercent: 80,
                                  resetsAt: Date().addingTimeInterval(2 * 86_400))

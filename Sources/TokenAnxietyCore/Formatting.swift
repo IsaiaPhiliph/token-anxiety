@@ -100,9 +100,24 @@ public enum Fmt {
         return days == 1 ? String(localized: "1 day ago") : String(localized: "\(days) days ago")
     }
 
-    /// "12.4M", "850k", "312" (with the separators of the app's language).
+    /// "12.4M", "850K", "3.1B" in English; "12,4 M", "850 mil", "3,1 mil M" in Spanish
+    /// (macOS's own compact style writes "3056,8 M" there). Separators follow the region.
     public static func tokens(_ value: Double) -> String {
-        value.formatted(.number.notation(.compactName).precision(.fractionLength(0...1)).locale(locale))
+        tokens(value, locale: locale)
+    }
+
+    static func tokens(_ value: Double, locale: Locale) -> String {
+        let spanish = locale.language.languageCode?.identifier == "es"
+        let magnitude = abs(value)
+        let (scaled, suffix): (Double, String) = switch magnitude {
+        case 1e9...: (value / 1e9, spanish ? "\u{00A0}mil\u{00A0}M" : "B")
+        case 1e6...: (value / 1e6, spanish ? "\u{00A0}M" : "M")
+        case 1e3...: (value / 1e3, spanish ? "\u{00A0}mil" : "K")
+        default: (value, "")
+        }
+        // One decimal while it says something: 12.4M, but 125M.
+        let digits = suffix.isEmpty || abs(scaled) >= 100 ? 0 : 1
+        return scaled.formatted(.number.precision(.fractionLength(0...digits)).grouping(.automatic).locale(locale)) + suffix
     }
 
     /// "$12.40", "12,40 US$".

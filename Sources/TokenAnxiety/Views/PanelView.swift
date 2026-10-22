@@ -69,6 +69,12 @@ struct PanelView: View {
                     Button(action: actions.openStats) {
                         Image(systemName: "chart.bar.xaxis")
                             .frame(width: 18, height: 18)
+                            .overlay(alignment: .topTrailing) {
+                                // New achievements waiting.
+                                if store.achievements.hasUnseen {
+                                    Circle().fill(Color.red).frame(width: 7, height: 7).offset(x: 4, y: -3)
+                                }
+                            }
                     }
                     .help("Statistics")
                     Button(action: actions.refresh) {

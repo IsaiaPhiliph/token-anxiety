@@ -293,6 +293,19 @@ private let now = LogLines.date("2026-10-21T12:00:00.000Z")!
         #expect(names.name(for: nil) == ProjectNames.unknown)
     }
 
+    @Test func neverLooksIntoProtectedFolders() {
+        let touched = Locked<[String]>([])
+        let names = ProjectNames(home: "/Users/me", fileExists: { path in touched.withLock { $0.append(path) }; return false },
+                                 isDirectory: { path in touched.withLock { $0.append(path) }; return false },
+                                 readFile: { path in touched.withLock { $0.append(path) }; return nil })
+        #expect(names.name(for: "/Users/me/Documents/Proyectos/shop/.claude/worktrees/fix-x") == "shop")
+        #expect(names.name(for: "/Users/me/Desktop/demo") == "demo")
+        #expect(names.name(for: "/Volumes/External/work/app") == "app")
+        #expect(touched.withLock { $0 }.isEmpty)
+        _ = names.name(for: "/Users/me/code/app")
+        #expect(!touched.withLock { $0 }.isEmpty)
+    }
+
     @Test func parsesLogTimestampsQuickly() {
         for text in ["2026-10-22T14:05:31.123Z", "2026-01-01T00:00:00Z", "2024-02-29T23:59:59.999Z"] {
             let fast = LogLines.date(text)?.timeIntervalSince1970 ?? 0

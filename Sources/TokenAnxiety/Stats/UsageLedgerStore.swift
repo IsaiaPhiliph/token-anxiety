@@ -11,6 +11,8 @@ final class UsageLedgerStore {
     private(set) var progress: LedgerIndexer.Progress?
     private(set) var lastUpdate: Date?
 
+    /// Called with each new ledger.
+    @ObservationIgnored var onUpdate: ((UsageLedger) -> Void)?
     @ObservationIgnored private let indexer: LedgerIndexer?
     @ObservationIgnored private var running = false
 
@@ -33,6 +35,7 @@ final class UsageLedgerStore {
                 Task { @MainActor in self.progress = progress.fraction < 1 ? progress : nil }
             }
             self.ledger = ledger
+            onUpdate?(ledger)
             progress = nil
             lastUpdate = Date()
             running = false

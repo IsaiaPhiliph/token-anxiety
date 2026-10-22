@@ -104,6 +104,15 @@ private func weekly(_ used: Double, resetsIn remaining: TimeInterval, now: Date)
     @Test func plansAndTokens() {
         #expect(Fmt.planName("pro_plus") == "Pro Plus")
         #expect(Fmt.planName("max_20x") == "Max 20x")
-        #expect(["12.4M", "12,4M"].contains(Fmt.tokens(12_400_000))) // the separator follows the region
+        #expect(["12.4M", "12,4M", "12,4\u{00A0}M"].contains(Fmt.tokens(12_400_000))) // the separator follows the region
+        let english = Locale(identifier: "en_US")
+        let spanish = Locale(identifier: "es_ES")
+        #expect(Fmt.tokens(3_056_800_000, locale: english) == "3.1B")
+        #expect(Fmt.tokens(3_056_800_000, locale: spanish) == "3,1\u{00A0}mil\u{00A0}M")
+        #expect(Fmt.tokens(1_000_000_000, locale: spanish) == "1\u{00A0}mil\u{00A0}M")
+        #expect(Fmt.tokens(850_000, locale: english) == "850K")
+        #expect(Fmt.tokens(850_000, locale: spanish) == "850\u{00A0}mil")
+        #expect(Fmt.tokens(125_400_000, locale: english) == "125M")
+        #expect(Fmt.tokens(312, locale: spanish) == "312")
     }
 }
