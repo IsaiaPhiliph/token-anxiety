@@ -88,7 +88,16 @@ final class PanelController {
         let glass = NSGlassEffectView()
         glass.cornerRadius = Self.cornerRadius
         glass.contentView = hosting
-        panel.contentView = glass
+        // The glass leaves a faint fill in its square corners, and the window's shadow
+        // follows whatever is drawn: clipped to the rounded shape, so is the shadow.
+        let clip = NSView()
+        clip.wantsLayer = true
+        clip.layer?.cornerRadius = Self.cornerRadius
+        clip.layer?.cornerCurve = .continuous
+        clip.layer?.masksToBounds = true
+        glass.autoresizingMask = [.width, .height]
+        clip.addSubview(glass)
+        panel.contentView = clip
         return panel
     }
 
