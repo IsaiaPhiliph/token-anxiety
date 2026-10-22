@@ -33,7 +33,7 @@ public actor CursorProvider: UsageProvider {
         Log.debug("cursor: database \(FileManager.default.isFile(database) ? "found" : "missing"), keys \(values.keys.sorted())")
         guard let token = values["cursorAuth/accessToken"], !token.isEmpty,
               let subject = JWT.claims(token)?["sub"]?.string else {
-            throw ProviderError.notLoggedIn("Inicia sesión en Cursor para ver tu uso.")
+            throw ProviderError.notLoggedIn(String(localized: "Sign in to Cursor to see your usage."))
         }
         let userID = subject.split(separator: "|").last.map(String.init) ?? subject
         let cookie = "WorkosCursorSessionToken=\(userID)%3A%3A\(token)"
@@ -47,7 +47,7 @@ public actor CursorProvider: UsageProvider {
                 return snapshot
             }
         } catch ProviderError.http(let status) where status == 401 || status == 403 {
-            throw ProviderError.sessionExpired("La sesión de Cursor ha caducado. Abre Cursor para renovarla.")
+            throw ProviderError.sessionExpired(String(localized: "Cursor's session has expired. Open Cursor to renew it."))
         } catch ProviderError.http(404) {
             // Older accounts: fall through to the request-based endpoint.
         }
@@ -75,29 +75,29 @@ public actor CursorProvider: UsageProvider {
             var percent = plan["totalPercentUsed"]?.double
             if percent == nil, let used, let limit, limit > 0 { percent = used / limit * 100 }
             if let percent {
-                let detail = (used != nil && (limit ?? 0) > 0) ? "\(Fmt.money(used! / 100)) de \(Fmt.money(limit! / 100))" : nil
-                windows.append(UsageWindow(id: "plan", label: "Este mes", kind: .monthly, usedPercent: percent,
+                let detail = (used != nil && (limit ?? 0) > 0) ? String(localized: "\(Fmt.money(used! / 100)) of \(Fmt.money(limit! / 100))") : nil
+                windows.append(UsageWindow(id: "plan", label: String(localized: "This month"), kind: .monthly, usedPercent: percent,
                                            resetsAt: end, duration: duration, detail: detail))
             }
             if let auto = plan["autoPercentUsed"]?.double {
-                windows.append(UsageWindow(id: "auto", label: "Auto y Composer", kind: .other, usedPercent: auto,
+                windows.append(UsageWindow(id: "auto", label: String(localized: "Auto and Composer"), kind: .other, usedPercent: auto,
                                            resetsAt: end, duration: duration))
             }
             if let api = plan["apiPercentUsed"]?.double {
-                windows.append(UsageWindow(id: "api", label: "Modelos elegidos", kind: .other, usedPercent: api,
+                windows.append(UsageWindow(id: "api", label: String(localized: "Selected models"), kind: .other, usedPercent: api,
                                            resetsAt: end, duration: duration))
             }
         }
         if let onDemand = usage["onDemand"], onDemand["enabled"]?.bool == true {
             let used = onDemand["used"]?.double ?? 0
             if let limit = onDemand["limit"]?.double, limit > 0 {
-                facts.append(Fact("Bajo demanda", "\(Fmt.money(used / 100)) de \(Fmt.money(limit / 100))", symbol: "creditcard"))
+                facts.append(Fact(String(localized: "On-demand"), String(localized: "\(Fmt.money(used / 100)) of \(Fmt.money(limit / 100))"), symbol: "creditcard"))
             } else {
-                facts.append(Fact("Bajo demanda", Fmt.money(used / 100), symbol: "creditcard"))
+                facts.append(Fact(String(localized: "On-demand"), Fmt.money(used / 100), symbol: "creditcard"))
             }
         }
         if summary["isUnlimited"]?.bool == true {
-            facts.append(Fact("Plan", "sin límite", symbol: "infinity"))
+            facts.append(Fact(String(localized: "Plan"), String(localized: "unlimited"), symbol: "infinity"))
         }
         guard !windows.isEmpty || !facts.isEmpty else { return nil }
         let plan = (summary["membershipType"]?.string ?? membership).map(Fmt.planName)
@@ -113,10 +113,10 @@ public actor CursorProvider: UsageProvider {
         func rank(_ model: String) -> (Int, String) { (model == "gpt-4" ? 0 : 1, model) }
         for (model, value) in (usage.object ?? [:]).sorted(by: { rank($0.key) < rank($1.key) }) {
             guard let requests = value["numRequests"]?.double, let max = value["maxRequestUsage"]?.double, max > 0 else { continue }
-            windows.append(UsageWindow(id: model, label: model == "gpt-4" ? "Peticiones rápidas" : model,
+            windows.append(UsageWindow(id: model, label: model == "gpt-4" ? String(localized: "Fast requests") : model,
                                        kind: windows.isEmpty ? .monthly : .other, usedPercent: requests / max * 100,
                                        resetsAt: end, duration: 30 * 86_400,
-                                       detail: "\(Int(requests)) de \(Int(max)) peticiones"))
+                                       detail: String(localized: "\(Int(requests)) of \(Int(max)) requests")))
         }
         return ProviderSnapshot(provider: .cursor, plan: membership.map(Fmt.planName), account: email,
                                 windows: windows, fetchedAt: now)

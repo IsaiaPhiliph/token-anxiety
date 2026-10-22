@@ -75,7 +75,7 @@ public struct UsageWindow: Codable, Sendable, Hashable, Identifiable {
     }
 }
 
-/// A label/value line shown under a provider's meters ("Uso extra", "Racha"…).
+/// A label/value line shown under a provider's meters ("Extra usage", "Streak"…).
 public struct Fact: Codable, Sendable, Hashable, Identifiable {
     public var label: String
     public var value: String
@@ -166,16 +166,16 @@ public enum ProviderError: Error, LocalizedError, Sendable, Equatable {
 
     public var errorDescription: String? {
         switch self {
-        case .notInstalled: "No está instalado en este Mac."
+        case .notInstalled: String(localized: "Not installed on this Mac.")
         case .notLoggedIn(let message), .sessionExpired(let message), .accessDenied(let message),
              .notRunning(let message), .network(let message), .badResponse(let message):
             message
         case .http(let status):
             switch status {
-            case 401, 403: "El servicio ha rechazado la sesión (\(status))."
-            case 429: "Demasiadas consultas seguidas; lo vuelvo a intentar en un rato."
-            case 500...: "El servicio no responde ahora mismo (\(status))."
-            default: "Respuesta inesperada del servicio (\(status))."
+            case 401, 403: String(localized: "The service rejected the session (\(status)).")
+            case 429: String(localized: "Too many requests in a row; trying again in a while.")
+            case 500...: String(localized: "The service is not answering right now (\(status)).")
+            default: String(localized: "Unexpected answer from the service (\(status)).")
             }
         }
     }

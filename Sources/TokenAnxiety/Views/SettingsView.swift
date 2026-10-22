@@ -14,16 +14,16 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            Section("Barra de menús") {
-                Picker("Estilo", selection: $settings.menuStyle) {
+            Section("Menu bar") {
+                Picker("Style", selection: $settings.menuStyle) {
                     ForEach(MenuStyle.allCases) { style in Text(style.title).tag(style) }
                 }
                 .pickerStyle(.segmented)
-                LabeledContent("Vista previa") {
+                LabeledContent("Preview") {
                     MenuBarPreview(store: store, settings: settings)
                 }
-                Toggle("Colorear las cifras al acercarte al límite", isOn: $settings.colorizeMenuBar)
-                Picker("Actualizar cada", selection: $settings.refreshMinutes) {
+                Toggle("Color the figures as you near the limit", isOn: $settings.colorizeMenuBar)
+                Picker("Refresh every", selection: $settings.refreshMinutes) {
                     ForEach([1, 2, 5, 10, 15], id: \.self) { minutes in Text("\(minutes) min").tag(minutes) }
                 }
                 .onChange(of: settings.refreshMinutes) { store.reschedule() }
@@ -36,19 +36,19 @@ struct SettingsView: View {
                     }
                 }
                 Toggle(isOn: $settings.renewClaudeSession) {
-                    Text("Renovar la sesión de Claude Code cuando caduque")
-                    Text("Dura 8 horas y solo la renueva el «claude» de la terminal. La renueva como él y la guarda en el mismo sitio del llavero.")
+                    Text("Renew Claude Code's session when it expires")
+                    Text("It lasts 8 hours and only the “claude” command renews it. The app renews it the same way and saves it in the same Keychain item.")
                 }
             } header: {
-                Text("Servicios")
+                Text("Services")
             } footer: {
-                Text("Se detectan solos con la sesión de cada app. Las sesiones se leen en este Mac y solo se envían a su propio servicio (Anthropic, OpenAI, Cursor); Antigravity se consulta en local.")
+                Text("Found on their own through each app's session. Sessions are read on this Mac and only sent to their own service (Anthropic, OpenAI, Cursor); Antigravity is asked locally.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
-            Section("Avisos") {
-                Toggle("Avisarme al acercarme al límite", isOn: $settings.notificationsEnabled)
+            Section("Alerts") {
+                Toggle("Alert me as I near the limit", isOn: $settings.notificationsEnabled)
                     .onChange(of: settings.notificationsEnabled) { _, enabled in
                         if enabled { Task { notificationAccess = await notifier.requestAccess() } }
                     }
@@ -60,47 +60,47 @@ struct SettingsView: View {
                             .foregroundStyle(.secondary)
                         Spacer()
                         if access == .notAsked {
-                            Button("Dar permiso") { Task { notificationAccess = await notifier.requestAccess() } }
+                            Button("Allow") { Task { notificationAccess = await notifier.requestAccess() } }
                         } else {
-                            Button("Abrir") { notifier.openSystemSettings() }
+                            Button("Open") { notifier.openSystemSettings() }
                         }
                     }
                 }
                 Stepper(value: $settings.warnThreshold, in: 50...95, step: 5) {
-                    LabeledContent("Primer aviso", value: Fmt.percent(Double(settings.warnThreshold)))
+                    LabeledContent("First alert", value: Fmt.percent(Double(settings.warnThreshold)))
                 }
                 .disabled(!settings.notificationsEnabled)
                 .onChange(of: settings.warnThreshold) { _, value in
                     if settings.criticalThreshold <= value { settings.criticalThreshold = min(100, value + 5) }
                 }
                 Stepper(value: $settings.criticalThreshold, in: 55...100, step: 5) {
-                    LabeledContent("Segundo aviso", value: Fmt.percent(Double(settings.criticalThreshold)))
+                    LabeledContent("Second alert", value: Fmt.percent(Double(settings.criticalThreshold)))
                 }
                 .disabled(!settings.notificationsEnabled)
                 .onChange(of: settings.criticalThreshold) { _, value in
                     if settings.warnThreshold >= value { settings.warnThreshold = max(50, value - 5) }
                 }
-                Toggle("Avisarme cuando vuelva el cupo", isOn: $settings.notifyRenewals)
+                Toggle("Alert me when the quota comes back", isOn: $settings.notifyRenewals)
                     .disabled(!settings.notificationsEnabled)
                 HStack {
                     Spacer()
-                    Button("Probar un aviso") { notifier.sendTest() }
+                    Button("Send a test alert") { notifier.sendTest() }
                         .disabled(!settings.notificationsEnabled)
                 }
             }
 
             Section("Panel") {
-                Toggle("Mostrar el ritmo semanal", isOn: $settings.showPace)
-                Toggle("Mostrar el correo de cada cuenta", isOn: $settings.showAccounts)
-                Toggle("Guardar el historial (solo en este Mac)", isOn: $settings.historyEnabled)
+                Toggle("Show the weekly pace", isOn: $settings.showPace)
+                Toggle("Show each account's email", isOn: $settings.showAccounts)
+                Toggle("Keep the history (on this Mac only)", isOn: $settings.historyEnabled)
                 HStack {
                     Spacer()
-                    Button("Borrar el historial", role: .destructive) { store.clearHistory() }
+                    Button("Clear the history", role: .destructive) { store.clearHistory() }
                 }
             }
 
             Section("General") {
-                Toggle("Abrir al iniciar sesión", isOn: $launchAtLogin)
+                Toggle("Open at login", isOn: $launchAtLogin)
                     .onChange(of: launchAtLogin) { _, enabled in
                         do {
                             try LoginItem.set(enabled)
@@ -113,11 +113,11 @@ struct SettingsView: View {
                     }
                 if loginStatus == .requiresApproval {
                     HStack {
-                        Text("Falta aprobarlo en Ajustes del Sistema › General › Ítems de inicio.")
+                        Text("Approve it in System Settings › General › Login Items.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         Spacer()
-                        Button("Abrir") { SMAppService.openSystemSettingsLoginItems() }
+                        Button("Open") { SMAppService.openSystemSettingsLoginItems() }
                     }
                 }
                 if let loginError {
@@ -131,8 +131,8 @@ struct SettingsView: View {
                         .resizable()
                         .frame(width: 36, height: 36)
                     VStack(alignment: .leading) {
-                        Text("Token Anxiety \(AppInfo.version)").font(.headline)
-                        Text("Hecho con ansiedad, para quemar tokens con cabeza.")
+                        Text(verbatim: "Token Anxiety \(AppInfo.version)").font(.headline)
+                        Text("Made with anxiety, to burn tokens wisely.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -159,9 +159,9 @@ private extension NotificationAccess {
     /// Why the alerts would not show up; nil when they do.
     var problem: String? {
         switch self {
-        case .denied: "macOS tiene bloqueados los avisos de Token Anxiety: activa «Permitir notificaciones»."
-        case .quiet: "Los avisos no salen en pantalla: marca «Escritorio» en sus notificaciones."
-        case .notAsked: "Falta darle permiso a la app para avisarte."
+        case .denied: String(localized: "macOS blocks Token Anxiety's alerts: turn on “Allow notifications”.")
+        case .quiet: String(localized: "Alerts don't show on screen: tick “Desktop” in its notifications.")
+        case .notAsked: String(localized: "The app still needs permission to alert you.")
         case .allowed, .unavailable: nil
         }
     }
@@ -184,13 +184,13 @@ private struct ServiceRow: View {
                     .lineLimit(2)
             }
             Spacer()
-            Toggle("En la barra", isOn: Binding(
+            Toggle("In menu bar", isOn: Binding(
                 get: { settings.showsInMenuBar(id) },
                 set: { settings.setShowsInMenuBar(id, $0) }
             ))
             .toggleStyle(.checkbox)
             .disabled(!settings.isEnabled(id))
-            Toggle("Activado", isOn: Binding(
+            Toggle("On", isOn: Binding(
                 get: { settings.isEnabled(id) },
                 set: { enabled in
                     settings.setEnabled(id, enabled)
@@ -203,15 +203,15 @@ private struct ServiceRow: View {
     }
 
     private var status: String {
-        guard let entry else { return "Buscando…" }
+        guard let entry else { return String(localized: "Looking…") }
         if let snapshot = entry.snapshot {
-            var parts = [snapshot.plan ?? "Detectado"]
+            var parts = [snapshot.plan ?? String(localized: "Found")]
             if settings.showAccounts, let account = snapshot.account { parts.append(account) }
             if let error = entry.error, let message = error.errorDescription { parts.append(message) }
             return parts.joined(separator: " · ")
         }
-        if let error = entry.error { return error.errorDescription ?? "Error" }
-        return entry.installed ? "Detectado" : "No está en este Mac"
+        if let error = entry.error { return error.errorDescription ?? String(localized: "Error") }
+        return entry.installed ? String(localized: "Found") : String(localized: "Not on this Mac")
     }
 }
 

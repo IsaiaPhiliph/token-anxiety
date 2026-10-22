@@ -53,7 +53,7 @@ private func json(_ text: String) -> JSONValue {
         #expect(snapshot.primary?.usedPercent == 34)
         #expect(snapshot.secondary?.usedPercent == 61)
         #expect(snapshot.primary?.resetsAt == DateParsing.iso8601("2026-10-22T15:59:59.943Z"))
-        #expect(snapshot.facts.first?.label == "Uso extra")
+        #expect(snapshot.facts.first?.label == "Extra usage")
     }
 
     @Test func plansReadLikePeopleSayThem() {
@@ -121,7 +121,7 @@ private func hex(_ data: Data) -> String {
         #expect(snapshot.secondary?.resetsAt == Date(timeIntervalSince1970: 1_800_400_000))
         #expect(snapshot.windows.count == 2) // the "codex" bucket is the main one
         #expect(snapshot.dailyTokens.count == 1)
-        #expect(snapshot.facts.map(\.label).contains("Racha"))
+        #expect(snapshot.facts.map(\.label).contains("Streak"))
     }
 
     @Test func freePlanHasAMonthlyWindow() {
@@ -191,9 +191,9 @@ private func hex(_ data: Data) -> String {
         #expect(snapshot.plan == "Pro")
         #expect(snapshot.primary?.kind == .monthly)
         #expect(snapshot.primary?.usedPercent == 41)
-        #expect(snapshot.primary?.detail?.contains("8,20") == true)
+        #expect(snapshot.primary?.detail == "\(Fmt.money(8.2)) of \(Fmt.money(20))")
         #expect(snapshot.windows.map(\.id) == ["plan", "auto", "api"])
-        #expect(snapshot.facts.first?.label == "Bajo demanda")
+        #expect(snapshot.facts.first?.label == "On-demand")
     }
 
     @Test func parsesTheLegacyUsage() {
@@ -206,9 +206,9 @@ private func hex(_ data: Data) -> String {
         let snapshot = CursorProvider.snapshot(legacy: usage, membership: "pro", email: nil)
         #expect(snapshot.plan == "Pro")
         #expect(snapshot.windows.map(\.id) == ["gpt-4", "gpt-3.5-turbo"]) // fast requests first, whatever the names
-        #expect(snapshot.primary?.label == "Peticiones rápidas")
+        #expect(snapshot.primary?.label == "Fast requests")
         #expect(snapshot.primary?.usedPercent == 24)
-        #expect(snapshot.primary?.detail == "120 de 500 peticiones")
+        #expect(snapshot.primary?.detail == "120 of 500 requests")
         #expect(snapshot.primary?.resetsAt != nil)
     }
 }

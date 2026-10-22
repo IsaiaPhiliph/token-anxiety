@@ -59,21 +59,21 @@ public struct Pace: Sendable, Equatable {
                     resetsAt: resetsAt, verdict: verdict)
     }
 
-    /// "+8 pts", "−12 pts", "al ritmo".
+    /// "+8 pts", "−12 pts", "on pace".
     public var deltaText: String {
         let points = Int(delta.rounded())
-        if points == 0 { return "al ritmo" }
+        if points == 0 { return String(localized: "on pace") }
         return points > 0 ? "+\(points) pts" : "−\(-points) pts"
     }
 
     public func summary(now: Date = Date()) -> String {
         let projected = Fmt.percent(min(projectedPercent, 999))
         switch verdict {
-        case .exhausted: return "Agotado. Vuelve \(Fmt.moment(resetsAt, now: now))."
-        case .runsOut(let date): return "A este paso llegas al 100\(Fmt.thinSpace)% \(Fmt.moment(date, now: now))."
-        case .ahead: return "Vas por encima del ritmo, pero llegas: acabarías en el \(projected)."
-        case .onTrack: return "Vas al ritmo: acabarías en el \(projected)."
-        case .relaxed: return "Vas holgado: acabarías en el \(projected)."
+        case .exhausted: return String(localized: "Used up. Back \(Fmt.moment(resetsAt, now: now)).")
+        case .runsOut(let date): return String(localized: "At this pace you'll hit 100% \(Fmt.moment(date, now: now)).")
+        case .ahead: return String(localized: "Above pace, but you'll make it: you'd end at \(projected).")
+        case .onTrack: return String(localized: "On pace: you'd end at \(projected).")
+        case .relaxed: return String(localized: "Plenty of room: you'd end at \(projected).")
         }
     }
 

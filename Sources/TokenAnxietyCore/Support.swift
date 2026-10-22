@@ -40,7 +40,7 @@ public enum ProcessRunner {
             do {
                 try process.run()
             } catch {
-                continuation.resume(throwing: ProviderError.badResponse("No se pudo ejecutar \(path): \(error.localizedDescription)"))
+                continuation.resume(throwing: ProviderError.badResponse(String(localized: "Could not run \(path): \(error.localizedDescription)")))
                 return
             }
             if let input {
@@ -67,7 +67,7 @@ public enum ProcessRunner {
                 group.wait()
                 box.process.waitUntilExit()
                 if box.timedOut.withLock({ $0 }) {
-                    continuation.resume(throwing: ProviderError.network("\((path as NSString).lastPathComponent) ha tardado demasiado en responder."))
+                    continuation.resume(throwing: ProviderError.network(String(localized: "\((path as NSString).lastPathComponent) took too long to answer.")))
                 } else {
                     continuation.resume(returning: Output(status: box.process.terminationStatus,
                                                           stdout: out.withLock { $0 },
@@ -107,7 +107,7 @@ public enum HTTP {
         do {
             return try JSONValue.parse(data)
         } catch {
-            throw ProviderError.badResponse("La respuesta del servicio no se entiende.")
+            throw ProviderError.badResponse(String(localized: "The service's answer makes no sense."))
         }
     }
 
@@ -121,11 +121,11 @@ public enum HTTP {
             Log.debug("\(request.url?.host() ?? "?")\(request.url?.path() ?? "") → URLError \(error.code.rawValue)")
             switch error.code {
             case .notConnectedToInternet, .networkConnectionLost, .dataNotAllowed:
-                throw ProviderError.network("Sin conexión a internet.")
+                throw ProviderError.network(String(localized: "No internet connection."))
             case .timedOut:
-                throw ProviderError.network("El servicio ha tardado demasiado en responder.")
+                throw ProviderError.network(String(localized: "The service took too long to answer."))
             case .cannotConnectToHost, .cannotFindHost:
-                throw ProviderError.network("No se puede conectar con el servicio.")
+                throw ProviderError.network(String(localized: "Cannot connect to the service."))
             default:
                 throw ProviderError.network(error.localizedDescription)
             }

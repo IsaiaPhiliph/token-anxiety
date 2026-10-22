@@ -92,7 +92,7 @@ struct ProviderSection: View {
                 }
             }
         } else if entry.error == nil {
-            Text("Sin límites que mostrar ahora mismo.")
+            Text("No limits to show right now.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -134,18 +134,18 @@ struct ProviderSection: View {
         .help(Fmt.resetLine(window.resetsAt, now: now) ?? window.label)
     }
 
-    /// "en 2 h 14 min" up to half a day, then "sábado 10:00".
+    /// "in 2 h 14 min" up to half a day, then "Saturday 10:00 AM".
     private func shortReset(_ date: Date?) -> String? {
         guard let date else { return nil }
         let remaining = date.timeIntervalSince(now)
-        if remaining <= 0 { return "renovando" }
-        if remaining < 12 * 3600 { return "en \(Fmt.duration(remaining))" }
+        if remaining <= 0 { return String(localized: "resetting") }
+        if remaining < 12 * 3600 { return String(localized: "in \(Fmt.duration(remaining))") }
         let calendar = Fmt.calendar
         if let tomorrow = calendar.date(byAdding: .day, value: 1, to: now), calendar.isDate(date, inSameDayAs: tomorrow) {
-            return "mañana \(Fmt.time(date))"
+            return String(localized: "tomorrow \(Fmt.time(date))")
         }
         if remaining < 6 * 86_400 { return "\(Fmt.weekday(date)) \(Fmt.time(date))" }
-        return Fmt.moment(date, now: now).replacingOccurrences(of: "el ", with: "")
+        return Fmt.day(date)
     }
 
     // MARK: Pace
@@ -165,7 +165,7 @@ struct ProviderSection: View {
                 .padding(.vertical, 2)
                 .background(Capsule().fill(tint.opacity(0.18)))
                 .foregroundStyle(tint)
-                .help("Puntos por encima (+) o por debajo (−) de un gasto uniforme durante la semana")
+                .help("Points above (+) or below (−) an even spend over the week")
         }
         .font(.system(size: 11.5))
     }
@@ -226,7 +226,7 @@ struct ProviderSection: View {
                         Image(systemName: "chevron.right")
                             .font(.system(size: 9, weight: .bold))
                             .rotationEffect(.degrees(showsHistory ? 90 : 0))
-                        Text("Últimos 7 días")
+                        Text("Last 7 days")
                     }
                     .font(.system(size: 11.5, weight: .medium))
                     .foregroundStyle(.secondary)
@@ -236,7 +236,7 @@ struct ProviderSection: View {
                 if showsHistory {
                     HistoryChart(samples: samples, daily: daily, now: now,
                                  primaryLabel: snapshot.primary?.label ?? "5 h",
-                                 secondaryLabel: snapshot.secondary?.label ?? "Semana")
+                                 secondaryLabel: snapshot.secondary?.label ?? String(localized: "Week"))
                         .transition(.opacity.combined(with: .move(edge: .top)))
                 }
             }
@@ -260,12 +260,12 @@ struct ProviderSection: View {
         return HStack(alignment: .top, spacing: 8) {
             Image(systemName: symbol)
                 .foregroundStyle(.orange)
-            Text(error.errorDescription ?? "Error")
+            Text(error.errorDescription ?? String(localized: "Error"))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 4)
             if retryable {
-                Button("Reintentar", action: retry)
+                Button("Retry", action: retry)
                     .buttonStyle(.glass)
                     .controlSize(.small)
             }

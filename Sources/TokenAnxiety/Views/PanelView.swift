@@ -51,7 +51,7 @@ struct PanelView: View {
                 .background(Circle().fill(mood.color.gradient))
                 .shadow(color: mood.color.opacity(0.35), radius: 6, y: 2)
             VStack(alignment: .leading, spacing: 1) {
-                Text("Token Anxiety")
+                Text(verbatim: "Token Anxiety")
                     .font(.system(size: 14, weight: .semibold))
                 Text(mood.phrase)
                     .font(.system(size: 11.5))
@@ -65,12 +65,12 @@ struct PanelView: View {
                             .symbolEffect(.rotate, options: .repeat(.continuous), isActive: store.isRefreshing)
                             .frame(width: 18, height: 18)
                     }
-                    .help("Actualizar ahora")
+                    .help("Refresh now")
                     Button(action: actions.openSettings) {
                         Image(systemName: "gearshape")
                             .frame(width: 18, height: 18)
                     }
-                    .help("Ajustes")
+                    .help("Settings")
                 }
                 .buttonStyle(.glass)
                 .buttonBorderShape(.circle)
@@ -83,9 +83,9 @@ struct PanelView: View {
             Image(systemName: "sparkle.magnifyingglass")
                 .font(.system(size: 28))
                 .foregroundStyle(.secondary)
-            Text("No encuentro ningún plan")
+            Text("No plans found")
                 .font(.headline)
-            Text("Inicia sesión en Claude Code, Codex o Cursor, o abre Antigravity, y aparecerán aquí solos.")
+            Text("Sign in to Claude Code, Codex or Cursor, or open Antigravity, and they will show up here on their own.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -98,14 +98,14 @@ struct PanelView: View {
     private func footer(now: Date) -> some View {
         HStack {
             if store.demo {
-                Label("Datos de ejemplo", systemImage: "theatermasks")
+                Label("Sample data", systemImage: "theatermasks")
             } else if let last = store.lastRefresh {
-                Text("Actualizado \(Fmt.ago(last, now: now))")
+                Text("Updated \(Fmt.ago(last, now: now))")
             } else {
-                Text("Actualizando…")
+                Text("Updating…")
             }
             Spacer()
-            Button("Salir", systemImage: "power", action: actions.quit)
+            Button("Quit", systemImage: "power", action: actions.quit)
                 .labelStyle(.titleAndIcon)
                 .buttonStyle(.glass)
                 .controlSize(.small)

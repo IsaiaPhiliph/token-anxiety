@@ -37,7 +37,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if settingsWindow == nil {
             let view = SettingsView(settings: settings, store: store, notifier: notifier)
             let window = NSWindow(contentViewController: NSHostingController(rootView: view))
-            window.title = "Ajustes de Token Anxiety"
+            window.title = String(localized: "Token Anxiety Settings")
             window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
             window.isReleasedWhenClosed = false
             window.setFrameAutosaveName("Settings")
@@ -56,16 +56,16 @@ enum Doctor {
         let providers: [any UsageProvider] = [ClaudeProvider(), CodexProvider(), AntigravityProvider(), CursorProvider()]
         for provider in providers {
             let installed = await provider.isInstalled()
-            print("== \(provider.id.displayName): \(installed ? "detectado" : "no detectado")")
+            print("== \(provider.id.displayName): \(installed ? "found" : "not found")")
             guard installed else { continue }
             do {
                 let snapshot = try await provider.fetch()
                 print("   plan: \(snapshot.plan ?? "–")")
                 for window in snapshot.windows {
-                    print("   \(window.label) [\(window.kind.rawValue)]: \(Fmt.percent(window.usedPercent)) · \(Fmt.resetLine(window.resetsAt) ?? "sin fecha")")
+                    print("   \(window.label) [\(window.kind.rawValue)]: \(Fmt.percent(window.usedPercent)) · \(Fmt.resetLine(window.resetsAt) ?? "no date")")
                 }
                 for fact in snapshot.facts { print("   \(fact.label): \(fact.value)") }
-                if !snapshot.dailyTokens.isEmpty { print("   tokens por día: \(snapshot.dailyTokens.count) días") }
+                if !snapshot.dailyTokens.isEmpty { print("   tokens per day: \(snapshot.dailyTokens.count) days") }
             } catch {
                 print("   error: \(error.localizedDescription)")
             }

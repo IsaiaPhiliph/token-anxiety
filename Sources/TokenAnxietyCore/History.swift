@@ -62,7 +62,7 @@ public struct HistoryLog: Codable, Sendable, Equatable {
 }
 
 /// Decides which notifications a new snapshot deserves: each threshold once per
-/// window cycle, "agotado" at 100 %, and "vuelve el cupo" when a window that
+/// window cycle, "used up" at 100 %, and "your quota is back" when a window that
 /// was nearly spent renews.
 public struct AlertTracker: Codable, Sendable, Equatable {
     struct Record: Codable, Sendable, Equatable {
@@ -133,28 +133,40 @@ public struct AlertTracker: Codable, Sendable, Equatable {
     }
 
     private static func event(_ kind: Event.Kind, _ provider: ProviderID, _ window: UsageWindow, now: Date) -> Event {
-        let span = switch window.kind {
-        case .session: "la sesión de 5 h"
-        case .weekly: "la semana"
-        case .monthly: "el mes"
-        default: window.label.lowercased()
-        }
+        // Whole sentences per window kind: articles and word order differ between languages.
+        let name = provider.displayName
+        let label = window.label
         let back = window.resetsAt.map { Fmt.moment($0, now: now) }
         switch kind {
         case .threshold(let level):
-            let quip = level >= 90 ? "Raciona los tokens." : "Empieza la ansiedad."
-            let when = back.map { " Se renueva \($0)." } ?? ""
-            return Event(provider: provider, window: window, kind: kind,
-                         title: "\(provider.displayName): \(level)\(Fmt.thinSpace)% de \(span)",
-                         body: quip + when)
+            let title = switch window.kind {
+            case .session: String(localized: "\(name): \(level)% of the 5-hour session")
+            case .weekly: String(localized: "\(name): \(level)% of the week")
+            case .monthly: String(localized: "\(name): \(level)% of the month")
+            default: String(localized: "\(name): \(level)% of \(label)")
+            }
+            let quip = level >= 90 ? String(localized: "Ration your tokens.") : String(localized: "The anxiety begins.")
+            let when = back.map { " " + String(localized: "Resets \($0).") } ?? ""
+            return Event(provider: provider, window: window, kind: kind, title: title, body: quip + when)
         case .exhausted:
-            return Event(provider: provider, window: window, kind: kind,
-                         title: "\(provider.displayName): has agotado \(span)",
-                         body: back.map { "Toca hierba: vuelve \($0)." } ?? "Toca hierba un rato.")
+            let title = switch window.kind {
+            case .session: String(localized: "\(name): you've used up the 5-hour session")
+            case .weekly: String(localized: "\(name): you've used up the week")
+            case .monthly: String(localized: "\(name): you've used up the month")
+            default: String(localized: "\(name): you've used up \(label)")
+            }
+            return Event(provider: provider, window: window, kind: kind, title: title,
+                         body: back.map { String(localized: "Go touch grass: it's back \($0).") }
+                             ?? String(localized: "Go touch grass for a while."))
         case .renewed:
+            let body = switch window.kind {
+            case .session: String(localized: "The 5-hour session has reset. Take a deep breath and burn some tokens.")
+            case .weekly: String(localized: "The week has reset. Take a deep breath and burn some tokens.")
+            case .monthly: String(localized: "The month has reset. Take a deep breath and burn some tokens.")
+            default: String(localized: "\(label) has reset. Take a deep breath and burn some tokens.")
+            }
             return Event(provider: provider, window: window, kind: kind,
-                         title: "\(provider.displayName): vuelve el cupo",
-                         body: "Se ha renovado \(span). Respira hondo y a quemar tokens.")
+                         title: String(localized: "\(name): your quota is back"), body: body)
         }
     }
 }

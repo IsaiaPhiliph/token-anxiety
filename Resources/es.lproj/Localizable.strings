@@ -1,0 +1,200 @@
+/* Spanish. Keys are the English texts in the code; check with the key list in CONTRIBUTING.md. */
+
+/* Formatting */
+"%lld days" = "%lld días";
+"1 day" = "1 día";
+"1 day and %lld h" = "1 día y %lld h";
+"less than 1 min" = "menos de 1 min";
+"today at %@" = "hoy a las %@";
+"today at %@ (one o'clock)" = "hoy a la %@";
+"tomorrow at %@" = "mañana a las %@";
+"tomorrow at %@ (one o'clock)" = "mañana a la %@";
+"on %@ at %@" = "el %@ a las %@";
+"on %@ at %@ (one o'clock)" = "el %@ a la %@";
+"on %@" = "el %@";
+"Resetting now" = "Se está renovando";
+"Resets in %@ (%@)" = "Se renueva en %@ (%@)";
+"Resets %@" = "Se renueva %@";
+"Resets %@." = "Se renueva %@.";
+"just now" = "ahora";
+"%lld min ago" = "hace %lld min";
+"%lld h ago" = "hace %lld h";
+"1 day ago" = "hace 1 día";
+"%lld days ago" = "hace %lld días";
+
+/* Pace */
+"on pace" = "al ritmo";
+"Used up. Back %@." = "Agotado. Vuelve %@.";
+"At this pace you'll hit 100%% %@." = "A este paso llegas al 100 %% %@.";
+"Above pace, but you'll make it: you'd end at %@." = "Vas por encima del ritmo, pero llegas: acabarías en el %@.";
+"On pace: you'd end at %@." = "Vas al ritmo: acabarías en el %@.";
+"Plenty of room: you'd end at %@." = "Vas holgado: acabarías en el %@.";
+
+/* Alerts */
+"%@: %lld%% of the 5-hour session" = "%@: %lld %% de la sesión de 5 h";
+"%@: %lld%% of the week" = "%@: %lld %% de la semana";
+"%@: %lld%% of the month" = "%@: %lld %% del mes";
+"%@: %lld%% of %@" = "%@: %lld %% de %@";
+"Ration your tokens." = "Raciona los tokens.";
+"The anxiety begins." = "Empieza la ansiedad.";
+"%@: you've used up the 5-hour session" = "%@: has agotado la sesión de 5 h";
+"%@: you've used up the week" = "%@: has agotado la semana";
+"%@: you've used up the month" = "%@: has agotado el mes";
+"%@: you've used up %@" = "%@: has agotado %@";
+"Go touch grass: it's back %@." = "Toca hierba: vuelve %@.";
+"Go touch grass for a while." = "Toca hierba un rato.";
+"%@: your quota is back" = "%@: vuelve el cupo";
+"The 5-hour session has reset. Take a deep breath and burn some tokens." = "Se ha renovado la sesión de 5 h. Respira hondo y a quemar tokens.";
+"The week has reset. Take a deep breath and burn some tokens." = "Se ha renovado la semana. Respira hondo y a quemar tokens.";
+"The month has reset. Take a deep breath and burn some tokens." = "Se ha renovado el mes. Respira hondo y a quemar tokens.";
+"%@ has reset. Take a deep breath and burn some tokens." = "Se ha renovado %@. Respira hondo y a quemar tokens.";
+"Token Anxiety: this is what alerts look like" = "Token Anxiety: así se ven los avisos";
+
+/* Errors */
+"Not installed on this Mac." = "No está instalado en este Mac.";
+"The service rejected the session (%lld)." = "El servicio ha rechazado la sesión (%lld).";
+"Too many requests in a row; trying again in a while." = "Demasiadas consultas seguidas; lo vuelvo a intentar en un rato.";
+"The service is not answering right now (%lld)." = "El servicio no responde ahora mismo (%lld).";
+"Unexpected answer from the service (%lld)." = "Respuesta inesperada del servicio (%lld).";
+"Could not run %@: %@" = "No se pudo ejecutar %@: %@";
+"%@ took too long to answer." = "%@ ha tardado demasiado en responder.";
+"The service's answer makes no sense." = "La respuesta del servicio no se entiende.";
+"No internet connection." = "Sin conexión a internet.";
+"The service took too long to answer." = "El servicio ha tardado demasiado en responder.";
+"Cannot connect to the service." = "No se puede conectar con el servicio.";
+
+/* Claude */
+"Claude Code can no longer renew its session. Run “claude” in a terminal and /login; the app keeps it alive after that." = "Claude Code ya no puede renovar su sesión. Abre «claude» en una terminal y haz /login; después la app la mantendrá viva.";
+"Claude Code's session has expired. Open Claude Code (or run “claude”) and it will renew itself." = "La sesión de Claude Code ha caducado. Abre Claude Code (o usa «claude») y se renovará sola.";
+"Sign in to Claude Code (“claude”, then /login) with your Pro or Max account." = "Inicia sesión en Claude Code («claude», luego /login) con tu cuenta Pro o Max.";
+"Claude Code has no session with your subscription (are you using an API key?)." = "Claude Code no tiene una sesión con tu suscripción (¿usas una clave de API?).";
+"macOS did not let the app read Claude Code's session from the Keychain. Click “Retry” and choose “Always Allow”." = "macOS no ha dejado leer la sesión de Claude Code del llavero. Pulsa «Reintentar» y elige «Permitir siempre».";
+"Anthropic renewed the session with an answer the app does not understand." = "Anthropic ha renovado la sesión con una respuesta que no entiendo.";
+"Claude Code's session was renewed but could not be saved. If Claude Code asks you to sign in, run /login." = "He renovado la sesión de Claude Code pero no la he podido guardar. Si Claude Code te pide entrar, haz /login.";
+"Unreadable renewal answer." = "Respuesta de renovación ilegible.";
+"Extra usage" = "Uso extra";
+"%@ of the monthly limit" = "%@ del límite mensual";
+"on" = "activado";
+"Session · 5 h" = "Sesión · 5 h";
+"Week" = "Semana";
+"Week · %@" = "Semana · %@";
+"Week · connected apps" = "Semana · apps conectadas";
+
+/* Codex */
+"Sign in to Codex with your ChatGPT account." = "Inicia sesión en Codex con tu cuenta de ChatGPT.";
+"Codex is signed out. Open it and sign in with ChatGPT." = "Codex no tiene sesión iniciada. Ábrelo e inicia sesión con ChatGPT.";
+"Codex's session has expired. Open Codex to renew it." = "La sesión de Codex ha caducado. Abre Codex para renovarla.";
+"Codex did not give its limits: %@" = "Codex no ha dado sus límites: %@";
+"Spending limit" = "Límite de gasto";
+"Credits" = "Créditos";
+"unlimited" = "sin límite";
+"Limit resets" = "Reinicios de límite";
+"1 available" = "1 disponible";
+"%lld available" = "%lld disponibles";
+"Status" = "Estado";
+"limit reached" = "límite alcanzado";
+"Streak" = "Racha";
+"1 day in a row" = "1 día seguido";
+"%lld days in a row" = "%lld días seguidos";
+"Lifetime tokens" = "Tokens desde siempre";
+"Month" = "Mes";
+"Codex quit without answering." = "Codex se ha cerrado sin responder.";
+"Could not start Codex: %@" = "No se pudo arrancar Codex: %@";
+"Codex quit." = "Codex se ha cerrado.";
+"Could not talk to Codex." = "No se pudo hablar con Codex.";
+"Codex took too long to answer." = "Codex ha tardado demasiado en responder.";
+
+/* Antigravity */
+"Open Antigravity to read its quota: it only gives it while the app is open." = "Abre Antigravity para leer su cuota: solo la da con la app abierta.";
+"Antigravity is starting; checking again in a moment." = "Antigravity se está abriendo; vuelvo a mirar en un momento.";
+"Antigravity answered without a quota." = "Antigravity ha respondido sin cuota.";
+"Prompt credits" = "Créditos de prompts";
+
+/* Cursor */
+"Sign in to Cursor to see your usage." = "Inicia sesión en Cursor para ver tu uso.";
+"Cursor's session has expired. Open Cursor to renew it." = "La sesión de Cursor ha caducado. Abre Cursor para renovarla.";
+"%@ of %@" = "%@ de %@";
+"This month" = "Este mes";
+"Auto and Composer" = "Auto y Composer";
+"Selected models" = "Modelos elegidos";
+"On-demand" = "Bajo demanda";
+"Plan" = "Plan";
+"Fast requests" = "Peticiones rápidas";
+"%lld of %lld requests" = "%lld de %lld peticiones";
+
+/* Menu bar */
+"Percentages" = "Porcentajes";
+"Double bars" = "Barras dobles";
+"Figure + bar" = "Cifra + barra";
+"Token Anxiety: no plans found" = "Token Anxiety: no encuentro ningún plan";
+"week %@" = "semana %@";
+"no data" = "sin datos";
+"Refresh now" = "Actualizar ahora";
+"Settings…" = "Ajustes…";
+"Quit Token Anxiety" = "Salir de Token Anxiety";
+
+/* Panel */
+"Looking for your plans…" = "Buscando tus planes…";
+"Total zen. Burn tokens fearlessly." = "Zen total. Quema tokens sin miedo.";
+"All under control." = "Todo bajo control.";
+"Slightly uneasy." = "Ligera inquietud.";
+"Token anxiety." = "Ansiedad de tokens.";
+"Panic. Ration." = "Pánico. Raciona.";
+"Blocked. Go touch grass." = "Bloqueado. Toca hierba.";
+"Settings" = "Ajustes";
+"No plans found" = "No encuentro ningún plan";
+"Sign in to Claude Code, Codex or Cursor, or open Antigravity, and they will show up here on their own." = "Inicia sesión en Claude Code, Codex o Cursor, o abre Antigravity, y aparecerán aquí solos.";
+"Sample data" = "Datos de ejemplo";
+"Updated %@" = "Actualizado %@";
+"Updating…" = "Actualizando…";
+"Quit" = "Salir";
+"No limits to show right now." = "Sin límites que mostrar ahora mismo.";
+"resetting" = "renovando";
+"in %@" = "en %@";
+"tomorrow %@" = "mañana %@";
+"Points above (+) or below (−) an even spend over the week" = "Puntos por encima (+) o por debajo (−) de un gasto uniforme durante la semana";
+"Last 7 days" = "Últimos 7 días";
+"Error" = "Error";
+"Retry" = "Reintentar";
+"Time" = "Hora";
+"Tokens per day" = "Tokens por día";
+"Day" = "Día";
+"Tokens" = "Tokens";
+
+/* Settings */
+"Token Anxiety Settings" = "Ajustes de Token Anxiety";
+"Menu bar" = "Barra de menús";
+"Style" = "Estilo";
+"Preview" = "Vista previa";
+"Color the figures as you near the limit" = "Colorear las cifras al acercarte al límite";
+"Refresh every" = "Actualizar cada";
+"%lld min" = "%lld min";
+"Renew Claude Code's session when it expires" = "Renovar la sesión de Claude Code cuando caduque";
+"It lasts 8 hours and only the “claude” command renews it. The app renews it the same way and saves it in the same Keychain item." = "Dura 8 horas y solo la renueva el «claude» de la terminal. La renueva como él y la guarda en el mismo sitio del llavero.";
+"Services" = "Servicios";
+"Found on their own through each app's session. Sessions are read on this Mac and only sent to their own service (Anthropic, OpenAI, Cursor); Antigravity is asked locally." = "Se detectan solos con la sesión de cada app. Las sesiones se leen en este Mac y solo se envían a su propio servicio (Anthropic, OpenAI, Cursor); Antigravity se consulta en local.";
+"Alerts" = "Avisos";
+"Alert me as I near the limit" = "Avisarme al acercarme al límite";
+"Allow" = "Dar permiso";
+"Open" = "Abrir";
+"First alert" = "Primer aviso";
+"Second alert" = "Segundo aviso";
+"Alert me when the quota comes back" = "Avisarme cuando vuelva el cupo";
+"Send a test alert" = "Probar un aviso";
+"Panel" = "Panel";
+"Show the weekly pace" = "Mostrar el ritmo semanal";
+"Show each account's email" = "Mostrar el correo de cada cuenta";
+"Keep the history (on this Mac only)" = "Guardar el historial (solo en este Mac)";
+"Clear the history" = "Borrar el historial";
+"General" = "General";
+"Open at login" = "Abrir al iniciar sesión";
+"Approve it in System Settings › General › Login Items." = "Falta aprobarlo en Ajustes del Sistema › General › Ítems de inicio.";
+"Made with anxiety, to burn tokens wisely." = "Hecho con ansiedad, para quemar tokens con cabeza.";
+"macOS blocks Token Anxiety's alerts: turn on “Allow notifications”." = "macOS tiene bloqueados los avisos de Token Anxiety: activa «Permitir notificaciones».";
+"Alerts don't show on screen: tick “Desktop” in its notifications." = "Los avisos no salen en pantalla: marca «Escritorio» en sus notificaciones.";
+"The app still needs permission to alert you." = "Falta darle permiso a la app para avisarte.";
+"In menu bar" = "En la barra";
+"On" = "Activado";
+"Looking…" = "Buscando…";
+"Found" = "Detectado";
+"Not on this Mac" = "No está en este Mac";

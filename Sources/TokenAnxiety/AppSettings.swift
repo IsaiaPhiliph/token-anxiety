@@ -11,9 +11,9 @@ enum MenuStyle: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .percentages: "Porcentajes"
-        case .bars: "Barras dobles"
-        case .numberAndBar: "Cifra + barra"
+        case .percentages: String(localized: "Percentages")
+        case .bars: String(localized: "Double bars")
+        case .numberAndBar: String(localized: "Figure + bar")
         }
     }
 }

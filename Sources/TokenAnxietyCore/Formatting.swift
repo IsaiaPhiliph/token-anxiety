@@ -1,10 +1,14 @@
 import Foundation
 
-/// Spanish formatting for everything the app shows.
+/// Formatting for everything the app shows, in the app's language (English, or
+/// Spanish when the Mac prefers it) with the Mac's region.
 public enum Fmt {
-    public static let locale = Locale(identifier: "es_ES")
-    /// Narrow no-break space, the Spanish separator between a number and "%".
-    public static let thinSpace = "\u{202F}"
+    /// The language macOS picked among the app's localizations, with the user's region.
+    public static let locale: Locale = {
+        let language = Bundle.main.preferredLocalizations.first ?? "en"
+        guard let region = Locale.current.region?.identifier else { return Locale(identifier: language) }
+        return Locale(identifier: "\(language)_\(region)")
+    }()
 
     public static var calendar: Calendar {
         var calendar = Calendar(identifier: .gregorian)
@@ -13,9 +17,9 @@ public enum Fmt {
         return calendar
     }
 
-    /// "34 %"
+    /// "34%" in English, "34 %" in Spanish.
     public static func percent(_ value: Double) -> String {
-        "\(Int(value.rounded()))\(thinSpace)%"
+        (value.rounded() / 100).formatted(.percent.precision(.fractionLength(0)).locale(locale))
     }
 
     /// "34%", for the menu bar where every point of width counts.
@@ -23,93 +27,87 @@ public enum Fmt {
         "\(Int(value.rounded()))%"
     }
 
-    /// "2 h 14 min", "3 días", "45 min", "menos de 1 min".
+    /// "2 h 14 min", "3 days", "45 min", "less than 1 min".
     public static func duration(_ interval: TimeInterval) -> String {
         let seconds = max(0, Int(interval))
         let days = seconds / 86_400
         let hours = (seconds % 86_400) / 3600
         let minutes = (seconds % 3600) / 60
-        if days >= 2 { return hours >= 12 ? "\(days + 1) días" : "\(days) días" }
-        if days == 1 { return hours > 0 ? "1 día y \(hours) h" : "1 día" }
+        if days >= 2 {
+            let rounded = hours >= 12 ? days + 1 : days
+            return String(localized: "\(rounded) days")
+        }
+        if days == 1 { return hours > 0 ? String(localized: "1 day and \(hours) h") : String(localized: "1 day") }
         if hours > 0 { return minutes > 0 ? "\(hours) h \(minutes) min" : "\(hours) h" }
         if minutes > 0 { return "\(minutes) min" }
-        return "menos de 1 min"
+        return String(localized: "less than 1 min")
     }
 
-    /// "15:30"
+    /// "3:30 PM", "15:30".
     public static func time(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = locale
-        formatter.dateFormat = "H:mm"
-        return formatter.string(from: date)
+        date.formatted(Date.FormatStyle(date: .omitted, time: .shortened, locale: locale, calendar: calendar))
     }
 
-    /// "jueves"
+    /// "Thursday"
     public static func weekday(_ date: Date) -> String {
+        date.formatted(Date.FormatStyle(locale: locale, calendar: calendar).weekday(.wide))
+    }
+
+    /// "November 10", "10 de noviembre".
+    public static func day(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.locale = locale
-        formatter.dateFormat = "EEEE"
+        formatter.setLocalizedDateFormatFromTemplate("dMMMM")
         return formatter.string(from: date)
     }
 
-    /// "hoy a las 15:30", "mañana a las 9:00", "el jueves a las 9:00", "el 10 de noviembre".
+    /// "today at 3:30 PM", "tomorrow at 9:00 AM", "on Thursday at 9:00 AM", "on November 10".
     public static func moment(_ date: Date, now: Date = Date()) -> String {
         let calendar = calendar
-        let at = calendar.component(.hour, from: date) == 1 ? "a la" : "a las"
-        if calendar.isDate(date, inSameDayAs: now) { return "hoy \(at) \(time(date))" }
+        let time = time(date)
+        // Spanish says "a la 1:00" but "a las 2:00".
+        let one = calendar.component(.hour, from: date) == 1
+        if calendar.isDate(date, inSameDayAs: now) {
+            return one ? String(localized: "today at \(time) (one o'clock)") : String(localized: "today at \(time)")
+        }
         if let tomorrow = calendar.date(byAdding: .day, value: 1, to: now),
            calendar.isDate(date, inSameDayAs: tomorrow) {
-            return "mañana \(at) \(time(date))"
+            return one ? String(localized: "tomorrow at \(time) (one o'clock)") : String(localized: "tomorrow at \(time)")
         }
         if date.timeIntervalSince(now) < 6 * 86_400, date > now {
-            return "el \(weekday(date)) \(at) \(time(date))"
+            let weekday = weekday(date)
+            return one ? String(localized: "on \(weekday) at \(time) (one o'clock)") : String(localized: "on \(weekday) at \(time)")
         }
-        let formatter = DateFormatter()
-        formatter.locale = locale
-        formatter.dateFormat = "d 'de' MMMM"
-        return "el \(formatter.string(from: date))"
+        return String(localized: "on \(day(date))")
     }
 
-    /// "Se renueva en 2 h 14 min (15:30)" / "Se renueva el jueves a las 9:00".
+    /// "Resets in 2 h 14 min (3:30 PM)" / "Resets on Thursday at 9:00 AM".
     public static func resetLine(_ date: Date?, now: Date = Date()) -> String? {
         guard let date else { return nil }
         let remaining = date.timeIntervalSince(now)
-        if remaining <= 0 { return "Se está renovando" }
-        if remaining < 12 * 3600 { return "Se renueva en \(duration(remaining)) (\(time(date)))" }
-        return "Se renueva \(moment(date, now: now))"
+        if remaining <= 0 { return String(localized: "Resetting now") }
+        if remaining < 12 * 3600 { return String(localized: "Resets in \(duration(remaining)) (\(time(date)))") }
+        return String(localized: "Resets \(moment(date, now: now))")
     }
 
-    /// "ahora", "hace 3 min", "hace 2 h", "hace 3 días".
+    /// "just now", "3 min ago", "2 h ago", "3 days ago".
     public static func ago(_ date: Date, now: Date = Date()) -> String {
         let seconds = now.timeIntervalSince(date)
-        if seconds < 45 { return "ahora" }
-        if seconds < 3600 { return "hace \(max(1, Int((seconds / 60).rounded()))) min" }
-        if seconds < 86_400 { return "hace \(Int(seconds / 3600)) h" }
+        if seconds < 45 { return String(localized: "just now") }
+        if seconds < 3600 { return String(localized: "\(max(1, Int((seconds / 60).rounded()))) min ago") }
+        if seconds < 86_400 { return String(localized: "\(Int(seconds / 3600)) h ago") }
         let days = Int(seconds / 86_400)
-        return days == 1 ? "hace 1 día" : "hace \(days) días"
+        return days == 1 ? String(localized: "1 day ago") : String(localized: "\(days) days ago")
     }
 
-    /// "12,4 M", "850 k", "312".
+    /// "12.4M", "850k", "312" (with the separators of the app's language).
     public static func tokens(_ value: Double) -> String {
-        let formatter = NumberFormatter()
-        formatter.locale = locale
-        formatter.maximumFractionDigits = 1
-        formatter.minimumFractionDigits = 0
-        switch value {
-        case 1_000_000_000...: return "\(formatter.string(from: NSNumber(value: value / 1_000_000_000)) ?? "")\(thinSpace)mil M"
-        case 1_000_000...: return "\(formatter.string(from: NSNumber(value: value / 1_000_000)) ?? "")\(thinSpace)M"
-        case 1000...: return "\(formatter.string(from: NSNumber(value: value / 1000)) ?? "")\(thinSpace)k"
-        default: return formatter.string(from: NSNumber(value: value)) ?? "\(Int(value))"
-        }
+        value.formatted(.number.notation(.compactName).precision(.fractionLength(0...1)).locale(locale))
     }
 
-    /// "12,40 US$"
+    /// "$12.40", "12,40 US$".
     public static func money(_ amount: Double, currency: String = "USD") -> String {
-        let formatter = NumberFormatter()
-        formatter.locale = locale
-        formatter.numberStyle = .currency
-        formatter.currencyCode = currency
-        return formatter.string(from: NSNumber(value: amount)) ?? String(format: "%.2f %@", amount, currency)
+        amount.formatted(.currency(code: currency).locale(locale))
     }
 
     /// "Max 20x", "Pro", "Pro Lite": plan identifiers as people say them.

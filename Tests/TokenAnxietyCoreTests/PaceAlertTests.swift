@@ -5,7 +5,7 @@ import Testing
 private let day: TimeInterval = 86_400
 
 private func weekly(_ used: Double, resetsIn remaining: TimeInterval, now: Date) -> UsageWindow {
-    UsageWindow(id: "seven_day", label: "Semana", kind: .weekly, usedPercent: used,
+    UsageWindow(id: "seven_day", label: "Week", kind: .weekly, usedPercent: used,
                 resetsAt: now.addingTimeInterval(remaining), duration: 7 * day)
 }
 
@@ -65,12 +65,13 @@ private func weekly(_ used: Double, resetsIn remaining: TimeInterval, now: Date)
             .map(\.kind) == [.threshold(80)])
     }
 
-    @Test func spanishCopy() throws {
+    /// Tests run without the app bundle, so they see the English source texts.
+    @Test func copy() throws {
         var tracker = AlertTracker()
         let event = try #require(tracker.events(for: snapshot(96, resetsIn: 3600), thresholds: [80, 95],
                                                 notifyRenewals: true, now: now).first)
-        #expect(event.title == "Claude: 95\(Fmt.thinSpace)% de la semana")
-        #expect(event.body.hasPrefix("Raciona los tokens."))
+        #expect(event.title == "Claude: 95% of the week")
+        #expect(event.body.hasPrefix("Ration your tokens."))
     }
 }
 
@@ -95,13 +96,14 @@ private func weekly(_ used: Double, resetsIn remaining: TimeInterval, now: Date)
     @Test func durations() {
         #expect(Fmt.duration(2 * 3600 + 14 * 60) == "2 h 14 min")
         #expect(Fmt.duration(45 * 60) == "45 min")
-        #expect(Fmt.duration(20) == "menos de 1 min")
-        #expect(Fmt.duration(day + 3 * 3600) == "1 día y 3 h")
+        #expect(Fmt.duration(20) == "less than 1 min")
+        #expect(Fmt.duration(day + 3 * 3600) == "1 day and 3 h")
+        #expect(Fmt.duration(3 * day) == "3 days")
     }
 
     @Test func plansAndTokens() {
         #expect(Fmt.planName("pro_plus") == "Pro Plus")
         #expect(Fmt.planName("max_20x") == "Max 20x")
-        #expect(Fmt.tokens(12_400_000) == "12,4\(Fmt.thinSpace)M")
+        #expect(["12.4M", "12,4M"].contains(Fmt.tokens(12_400_000))) // the separator follows the region
     }
 }

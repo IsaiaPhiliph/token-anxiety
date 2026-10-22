@@ -1,6 +1,6 @@
 # Token Anxiety
 
-A macOS menu bar app (AppKit + SwiftUI, macOS 26+, Swift 6 language mode) that shows the five-hour and weekly usage of the user's AI plans. The user speaks Spanish: UI text and README are in Spanish; commit messages, code, comments and this file are in English. The code lives in the private GitHub repo `IsaiaPhiliph/token-anxiety`.
+A macOS menu bar app (AppKit + SwiftUI, macOS 26+, Swift 6 language mode) that shows the five-hour and weekly usage of the user's AI plans. The user speaks Spanish (talk to them in Spanish), but the project is in English: code, UI texts, README, docs and commit messages. The app is localized: the English texts in the code are the keys, `Resources/es.lproj/Localizable.strings` is the Spanish translation (every new or changed text goes there too; `scripts/check-strings.py` fails while one is missing), and `Fmt.locale` follows the chosen language with the Mac's region. The code lives in the GitHub repo `IsaiaPhiliph/token-anxiety`, MIT licensed.
 
 ## Layout
 
@@ -9,7 +9,7 @@ A macOS menu bar app (AppKit + SwiftUI, macOS 26+, Swift 6 language mode) that s
   - `Models.swift`: `ProviderSnapshot` (`primary` is the five-hour figure, `secondary` the week), `UsageWindow`, `ProviderError` (Spanish messages; `needsUser` errors are not auto-retried).
   - `Pace.swift`, `History.swift` (`HistoryLog`, `AlertTracker`), `Formatting.swift` (`Fmt`, Spanish formats), `Demo.swift` (`--demo` data).
 - `Sources/TokenAnxiety`: the app. `UsageStore` polls the providers, `StatusItemController` + `MenuBarRenderer` draw the status item, `PanelController` hosts `PanelView` in a borderless `NSGlassEffectView` panel, `Views/SettingsView` is the settings window.
-- `scripts/build-app.sh` assembles and ad-hoc signs `build/Token Anxiety.app` (`--open [args]`, `--install`, `CONFIG=debug`). `scripts/make-icon.swift` draws the icon. `scripts/backdrop.swift` puts a plain gradient behind the panel for screenshots.
+- `scripts/build-app.sh` assembles and ad-hoc signs `build/Token Anxiety.app` (`--open [args]`, `--install`, `CONFIG=debug`). `scripts/make-icon.swift` draws the icon. `scripts/backdrop.swift` puts a plain gradient behind the panel for screenshots. `scripts/check-strings.py` checks a translation against the texts in the code.
 
 ## Commands
 
@@ -28,4 +28,4 @@ A macOS menu bar app (AppKit + SwiftUI, macOS 26+, Swift 6 language mode) that s
 
 `screencapture -l <windowID>` renders glass windows blank; capture a screen region with `screencapture -R x,y,w,h` instead (window bounds from `CGWindowListCopyWindowInfo`). The panel closes on any click outside it, so capture right after `--open-panel`. A Settings window opened from the background stays behind the frontmost app; it is not glass, so `-l` captures it.
 
-README screenshots (`docs/panel-dark.png`, `docs/panel-light.png`): `--demo --open-panel` over `scripts/backdrop.swift dark|light`, captured from y=0 to the panel's bottom, with the other apps' status items in the strip painted over. macOS 26 takes the menu bar's appearance from the wallpaper, not from light/dark mode: on this Mac the status item stays white in light mode, like the system's own items.
+To see a language, launch with `-AppleLanguages "(es)"` (or `(en)`). The README screenshot (`docs/panel-dark.png`): `-AppleLanguages "(en)" -AppleLocale en_US -hiddenInMenuBar "(cursor)" --demo --open-panel` (the argument domain overrides the user's own menu bar choices for that launch only) over `scripts/backdrop.swift dark`, captured from y=0 to the panel's bottom, with the other apps' status items in the strip painted over. macOS 26 takes the menu bar's appearance from the wallpaper, not from light/dark mode: on this Mac the status item stays white in light mode, like the system's own items.

@@ -66,11 +66,11 @@ final class StatusItemController: NSObject {
     }
 
     private func tooltip(for items: [MenuBarRenderer.Item]) -> String {
-        guard !items.isEmpty else { return "Token Anxiety: no encuentro ningún plan" }
+        guard !items.isEmpty else { return String(localized: "Token Anxiety: no plans found") }
         return items.map { item in
-            let figures = [item.primary.map { "5 h \(Fmt.percent($0))" }, item.secondary.map { "semana \(Fmt.percent($0))" }]
+            let figures = [item.primary.map { "5 h \(Fmt.percent($0))" }, item.secondary.map { String(localized: "week \(Fmt.percent($0))") }]
                 .compactMap { $0 }.joined(separator: ", ")
-            return "\(item.provider.displayName): \(figures.isEmpty ? "sin datos" : figures)"
+            return "\(item.provider.displayName): \(figures.isEmpty ? String(localized: "no data") : figures)"
         }.joined(separator: "\n")
     }
 
@@ -85,10 +85,10 @@ final class StatusItemController: NSObject {
     private func showMenu(from button: NSStatusBarButton) {
         panel.close()
         let menu = NSMenu()
-        menu.addItem(withTitle: "Actualizar ahora", action: #selector(refreshNow), keyEquivalent: "r").target = self
-        menu.addItem(withTitle: "Ajustes…", action: #selector(showSettings), keyEquivalent: ",").target = self
+        menu.addItem(withTitle: String(localized: "Refresh now"), action: #selector(refreshNow), keyEquivalent: "r").target = self
+        menu.addItem(withTitle: String(localized: "Settings…"), action: #selector(showSettings), keyEquivalent: ",").target = self
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Salir de Token Anxiety", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        menu.addItem(withTitle: String(localized: "Quit Token Anxiety"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menu.popUp(positioning: nil, at: NSPoint(x: 0, y: button.bounds.height + 5), in: button)
     }
 

@@ -39,11 +39,11 @@ public actor AntigravityProvider: UsageProvider {
         let servers = Self.findServers(in: listing.text)
         Log.debug("antigravity: \(servers.count) language servers")
         guard !servers.isEmpty else {
-            throw ProviderError.notRunning("Abre Antigravity para leer su cuota: solo la da con la app abierta.")
+            throw ProviderError.notRunning(String(localized: "Open Antigravity to read its quota: it only gives it while the app is open."))
         }
 
         // Antigravity can run more than one server (windows, the IDE build); any of them answers.
-        var lastError: Error = ProviderError.notRunning("Antigravity se está abriendo; vuelvo a mirar en un momento.")
+        var lastError: Error = ProviderError.notRunning(String(localized: "Antigravity is starting; checking again in a moment."))
         for server in servers {
             let lsof = try await ProcessRunner.run("/usr/sbin/lsof", ["-nP", "-a", "-p", String(server.pid), "-iTCP", "-sTCP:LISTEN", "-Fn"])
             var ports = Self.listeningPorts(in: lsof.text)
@@ -66,14 +66,14 @@ public actor AntigravityProvider: UsageProvider {
 
     private func userStatus(port: Int, scheme: String, token: String) async throws -> JSONValue {
         let url = URL(string: "\(scheme)://127.0.0.1:\(port)/exa.language_server_pb.LanguageServerService/GetUserStatus")!
-        let body = #"{"metadata":{"ideName":"antigravity","extensionName":"antigravity","locale":"es"}}"#
+        let body = #"{"metadata":{"ideName":"antigravity","extensionName":"antigravity","locale":"en"}}"#
         let request = HTTP.request(url, method: "POST", headers: [
             "Content-Type": "application/json",
             "Connect-Protocol-Version": "1",
             "X-Codeium-Csrf-Token": token,
         ], body: Data(body.utf8), timeout: 4)
         let json = try await HTTP.json(request, session: session)
-        guard json["userStatus"] != nil else { throw ProviderError.badResponse("Antigravity ha respondido sin cuota.") }
+        guard json["userStatus"] != nil else { throw ProviderError.badResponse(String(localized: "Antigravity answered without a quota.")) }
         return json
     }
 
@@ -139,7 +139,7 @@ public actor AntigravityProvider: UsageProvider {
         }
         var facts: [Fact] = []
         if let credits = status["planStatus"]?["availablePromptCredits"]?.double {
-            facts.append(Fact("Créditos de prompts", Fmt.tokens(credits), symbol: "text.bubble"))
+            facts.append(Fact(String(localized: "Prompt credits"), Fmt.tokens(credits), symbol: "text.bubble"))
         }
         return ProviderSnapshot(provider: .antigravity, plan: plan, account: status["email"]?.string,
                                 windows: windows, facts: facts, fetchedAt: now)

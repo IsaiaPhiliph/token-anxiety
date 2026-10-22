@@ -32,13 +32,13 @@ enum Mood {
 
     var phrase: String {
         switch self {
-        case .unknown: "Buscando tus planes…"
-        case .zen: "Zen total. Quema tokens sin miedo."
-        case .calm: "Todo bajo control."
-        case .uneasy: "Ligera inquietud."
-        case .anxious: "Ansiedad de tokens."
-        case .panic: "Pánico. Raciona."
-        case .blocked: "Bloqueado. Toca hierba."
+        case .unknown: String(localized: "Looking for your plans…")
+        case .zen: String(localized: "Total zen. Burn tokens fearlessly.")
+        case .calm: String(localized: "All under control.")
+        case .uneasy: String(localized: "Slightly uneasy.")
+        case .anxious: String(localized: "Token anxiety.")
+        case .panic: String(localized: "Panic. Ration.")
+        case .blocked: String(localized: "Blocked. Go touch grass.")
         }
     }
 

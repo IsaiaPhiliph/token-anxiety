@@ -33,7 +33,7 @@ public actor CodexProvider: UsageProvider {
 
     public func fetch() async throws -> ProviderSnapshot {
         guard FileManager.default.isFile(authFile) else {
-            throw ProviderError.notLoggedIn("Inicia sesión en Codex con tu cuenta de ChatGPT.")
+            throw ProviderError.notLoggedIn(String(localized: "Sign in to Codex with your ChatGPT account."))
         }
         if let binary = findBinary() {
             do {
@@ -90,16 +90,16 @@ public actor CodexProvider: UsageProvider {
         server.notify("initialized")
         let account = try? await server.request("account/read", params: ["refreshToken": false])
         if account?["requiresOpenaiAuth"]?.bool == true, account?["account"]?.isNull ?? true {
-            throw ProviderError.notLoggedIn("Codex no tiene sesión iniciada. Ábrelo e inicia sesión con ChatGPT.")
+            throw ProviderError.notLoggedIn(String(localized: "Codex is signed out. Open it and sign in with ChatGPT."))
         }
         let limits: JSONValue
         do {
             limits = try await server.request("account/rateLimits/read", params: nil, timeout: 20)
         } catch let error as AppServerConnection.RPCError {
             if error.message.lowercased().contains("auth") || error.message.lowercased().contains("login") {
-                throw ProviderError.sessionExpired("La sesión de Codex ha caducado. Abre Codex para renovarla.")
+                throw ProviderError.sessionExpired(String(localized: "Codex's session has expired. Open Codex to renew it."))
             }
-            throw ProviderError.badResponse("Codex no ha dado sus límites: \(error.message)")
+            throw ProviderError.badResponse(String(localized: "Codex did not give its limits: \(error.message)"))
         }
         let usage = try? await server.request("account/usage/read", params: nil, timeout: 10)
         return Self.snapshot(account: account, limits: limits, usage: usage)
@@ -110,7 +110,7 @@ public actor CodexProvider: UsageProvider {
     private func fetchViaHTTP() async throws -> ProviderSnapshot {
         guard let data = try? Data(contentsOf: authFile), let auth = try? JSONValue.parse(data),
               let token = auth["tokens"]?["access_token"]?.string else {
-            throw ProviderError.notLoggedIn("Inicia sesión en Codex con tu cuenta de ChatGPT.")
+            throw ProviderError.notLoggedIn(String(localized: "Sign in to Codex with your ChatGPT account."))
         }
         var headers = ["Authorization": "Bearer \(token)"]
         if let accountID = auth["tokens"]?["account_id"]?.string { headers["ChatGPT-Account-Id"] = accountID }
@@ -120,7 +120,7 @@ public actor CodexProvider: UsageProvider {
             let email = auth["tokens"]?["id_token"]?.string.flatMap(JWT.claims)?["email"]?.string
             return Self.snapshot(httpUsage: body, email: email)
         } catch ProviderError.http(let status) where status == 401 || status == 403 {
-            throw ProviderError.sessionExpired("La sesión de Codex ha caducado. Abre Codex para renovarla.")
+            throw ProviderError.sessionExpired(String(localized: "Codex's session has expired. Open Codex to renew it."))
         }
     }
 
@@ -160,32 +160,34 @@ public actor CodexProvider: UsageProvider {
         }
 
         if let spend = main["individualLimit"], let remaining = spend["remainingPercent"]?.double {
-            windows.append(UsageWindow(id: "spend", label: "Límite de gasto", kind: .other,
+            windows.append(UsageWindow(id: "spend", label: String(localized: "Spending limit"), kind: .other,
                                        usedPercent: 100 - remaining, resetsAt: DateParsing.date(spend["resetsAt"]),
-                                       detail: [spend["used"]?.string, spend["limit"]?.string].compactMap { $0 }.joined(separator: " de ")))
+                                       detail: [spend["used"]?.string, spend["limit"]?.string].compactMap { $0 }.joined(separator: " / ")))
         }
 
         if let credits = main["credits"] {
             if credits["unlimited"]?.bool == true {
-                facts.append(Fact("Créditos", "ilimitados", symbol: "infinity"))
+                facts.append(Fact(String(localized: "Credits"), String(localized: "unlimited"), symbol: "infinity"))
             } else if credits["hasCredits"]?.bool == true, let balance = credits["balance"]?.string {
-                facts.append(Fact("Créditos", balance, symbol: "creditcard"))
+                facts.append(Fact(String(localized: "Credits"), balance, symbol: "creditcard"))
             }
         }
         if let resets = limits["rateLimitResetCredits"]?["availableCount"]?.int, resets > 0 {
-            facts.append(Fact("Reinicios de límite", "\(resets) disponible\(resets == 1 ? "" : "s")", symbol: "arrow.counterclockwise"))
+            facts.append(Fact(String(localized: "Limit resets"), resets == 1 ? String(localized: "1 available") : String(localized: "\(resets) available"),
+                               symbol: "arrow.counterclockwise"))
         }
         if main["rateLimitReachedType"]?.string != nil {
-            facts.append(Fact("Estado", "límite alcanzado", symbol: "exclamationmark.octagon"))
+            facts.append(Fact(String(localized: "Status"), String(localized: "limit reached"), symbol: "exclamationmark.octagon"))
         }
 
         var daily: [DayValue] = []
         if let summary = usage?["summary"] {
             if let streak = summary["currentStreakDays"]?.int, streak > 0 {
-                facts.append(Fact("Racha", "\(streak) día\(streak == 1 ? "" : "s") seguidos", symbol: "flame"))
+                facts.append(Fact(String(localized: "Streak"), streak == 1 ? String(localized: "1 day in a row") : String(localized: "\(streak) days in a row"),
+                                   symbol: "flame"))
             }
             if let lifetime = summary["lifetimeTokens"]?.double, lifetime > 0 {
-                facts.append(Fact("Tokens desde siempre", Fmt.tokens(lifetime), symbol: "sum"))
+                facts.append(Fact(String(localized: "Lifetime tokens"), Fmt.tokens(lifetime), symbol: "sum"))
             }
         }
         for bucket in usage?["dailyUsageBuckets"]?.array ?? [] {
@@ -220,9 +222,9 @@ public actor CodexProvider: UsageProvider {
         var facts: [Fact] = []
         if let credits = body["credits"] {
             if credits["unlimited"]?.bool == true {
-                facts.append(Fact("Créditos", "ilimitados", symbol: "infinity"))
+                facts.append(Fact(String(localized: "Credits"), String(localized: "unlimited"), symbol: "infinity"))
             } else if credits["has_credits"]?.bool == true, let balance = credits["balance"]?.string {
-                facts.append(Fact("Créditos", balance, symbol: "creditcard"))
+                facts.append(Fact(String(localized: "Credits"), balance, symbol: "creditcard"))
             }
         }
         return ProviderSnapshot(provider: .codex, plan: planName(body["plan_type"]?.string), account: email,
@@ -234,17 +236,17 @@ public actor CodexProvider: UsageProvider {
         let kind: WindowKind
         switch minutes {
         case .some(let m) where m >= 280 && m <= 320:
-            (label, kind) = ("Sesión · 5 h", .session)
+            (label, kind) = (String(localized: "Session · 5 h"), .session)
         case .some(let m) where m >= 9_800 && m <= 10_300:
-            (label, kind) = ("Semana", .weekly)
+            (label, kind) = (String(localized: "Week"), .weekly)
         case .some(let m) where m >= 40_000:
-            (label, kind) = ("Mes", .monthly)
+            (label, kind) = (String(localized: "Month"), .monthly)
         case .some(let m) where m >= 1440:
-            (label, kind) = ("\(Int((m / 1440).rounded())) días", .other)
+            (label, kind) = (String(localized: "\(Int((m / 1440).rounded())) days"), .other)
         case .some(let m):
             (label, kind) = ("\(Int((m / 60).rounded())) h", .other)
         case .none:
-            (label, kind) = (id == "primary" ? "Sesión · 5 h" : "Semana", id == "primary" ? .session : .weekly)
+            (label, kind) = (id == "primary" ? String(localized: "Session · 5 h") : String(localized: "Week"), id == "primary" ? .session : .weekly)
         }
         let duration = minutes.map { $0 * 60 } ?? (kind == .session ? 5 * 3600 : kind == .weekly ? 7 * 86_400 : nil)
         return UsageWindow(id: id, label: prefix.map { "\($0) · \(label)" } ?? label, kind: kind,
@@ -292,7 +294,7 @@ final class AppServerConnection: @unchecked Sendable {
             let data = handle.availableData
             if data.isEmpty {
                 handle.readabilityHandler = nil
-                self?.failAll(ProviderError.badResponse("Codex se ha cerrado sin responder."))
+                self?.failAll(ProviderError.badResponse(String(localized: "Codex quit without answering.")))
             } else {
                 self?.receive(data)
             }
@@ -300,7 +302,7 @@ final class AppServerConnection: @unchecked Sendable {
         do {
             try process.run()
         } catch {
-            throw ProviderError.badResponse("No se pudo arrancar Codex: \(error.localizedDescription)")
+            throw ProviderError.badResponse(String(localized: "Could not start Codex: \(error.localizedDescription)"))
         }
     }
 
@@ -320,16 +322,16 @@ final class AppServerConnection: @unchecked Sendable {
                 return false
             }
             if closed {
-                continuation.resume(throwing: ProviderError.badResponse("Codex se ha cerrado."))
+                continuation.resume(throwing: ProviderError.badResponse(String(localized: "Codex quit.")))
                 return
             }
             do {
                 try input.fileHandleForWriting.write(contentsOf: line)
             } catch {
-                resolve(id, with: .failure(ProviderError.badResponse("No se pudo hablar con Codex.")))
+                resolve(id, with: .failure(ProviderError.badResponse(String(localized: "Could not talk to Codex."))))
             }
             DispatchQueue.global().asyncAfter(deadline: .now() + timeout) { [weak self] in
-                self?.resolve(id, with: .failure(ProviderError.network("Codex ha tardado demasiado en responder.")))
+                self?.resolve(id, with: .failure(ProviderError.network(String(localized: "Codex took too long to answer."))))
             }
         }
     }
@@ -343,7 +345,7 @@ final class AppServerConnection: @unchecked Sendable {
         output.fileHandleForReading.readabilityHandler = nil
         try? input.fileHandleForWriting.close()
         if process.isRunning { process.terminate() }
-        failAll(ProviderError.badResponse("Codex se ha cerrado."))
+        failAll(ProviderError.badResponse(String(localized: "Codex quit.")))
     }
 
     private func receive(_ data: Data) {

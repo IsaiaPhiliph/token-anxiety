@@ -101,13 +101,13 @@ public actor ClaudeProvider: UsageProvider {
         return Self.snapshot(from: usage, plan: plan, account: account.email)
     }
 
-    static let needsLogin = ProviderError.sessionExpired(
-        "Claude Code ya no puede renovar su sesión. Abre «claude» en una terminal y haz /login; después la app la mantendrá viva."
-    )
+    static let needsLogin = ProviderError.sessionExpired(String(localized:
+        "Claude Code can no longer renew its session. Run “claude” in a terminal and /login; the app keeps it alive after that."
+    ))
 
-    static let expired = ProviderError.sessionExpired(
-        "La sesión de Claude Code ha caducado. Abre Claude Code (o usa «claude») y se renovará sola."
-    )
+    static let expired = ProviderError.sessionExpired(String(localized:
+        "Claude Code's session has expired. Open Claude Code (or run “claude”) and it will renew itself."
+    ))
 
     private func requestUsage(_ credentials: Credentials) async throws -> JSONValue {
         let request = HTTP.request(Self.usageURL, headers: [
@@ -122,12 +122,12 @@ public actor ClaudeProvider: UsageProvider {
     private func loadCredentials(reload: Bool) async throws -> Credentials {
         if !reload, let credentials { return credentials }
         guard let stored = try await readStored() else {
-            throw ProviderError.notLoggedIn("Inicia sesión en Claude Code («claude», luego /login) con tu cuenta Pro o Max.")
+            throw ProviderError.notLoggedIn(String(localized: "Sign in to Claude Code (“claude”, then /login) with your Pro or Max account."))
         }
         let parsed = Self.parseCredentials(stored.data)
         Log.debug("claude: token \(parsed == nil ? "missing" : "present"), expires \(parsed?.expiresAt.map { "\($0)" } ?? "?"), plan \(parsed?.subscriptionType ?? "?")")
         guard let parsed else {
-            throw ProviderError.notLoggedIn("Claude Code no tiene una sesión con tu suscripción (¿usas una clave de API?).")
+            throw ProviderError.notLoggedIn(String(localized: "Claude Code has no session with your subscription (are you using an API key?)."))
         }
         self.stored = stored
         credentials = parsed
@@ -162,7 +162,7 @@ public actor ClaudeProvider: UsageProvider {
         Log.debug("claude: keychain exit \(output.status), \(output.stdout.count) bytes")
         if output.status == 44 { return nil } // errSecItemNotFound
         guard output.status == 0 else {
-            throw ProviderError.accessDenied("macOS no ha dejado leer la sesión de Claude Code del llavero. Pulsa «Reintentar» y elige «Permitir siempre».")
+            throw ProviderError.accessDenied(String(localized: "macOS did not let the app read Claude Code's session from the Keychain. Click “Retry” and choose “Always Allow”."))
         }
         let text = output.text.trimmingCharacters(in: .whitespacesAndNewlines)
         // `security -w` prints non-UTF-8 secrets as hex.
@@ -212,7 +212,7 @@ public actor ClaudeProvider: UsageProvider {
               let parsed = Self.parseCredentials(updated) else {
             lastRenewalFailure = Date()
             Log.notice("claude: renewal answered without an access token")
-            throw ProviderError.badResponse("Anthropic ha renovado la sesión con una respuesta que no entiendo.")
+            throw ProviderError.badResponse(String(localized: "Anthropic renewed the session with an answer the app does not understand."))
         }
         // The old refresh token may be spent now: the new one must reach Claude Code's storage.
         let renewed = Stored(data: updated, location: stored.location)
@@ -222,7 +222,7 @@ public actor ClaudeProvider: UsageProvider {
             try await write(renewed)
         } catch {
             Log.notice("claude: renewed but not saved: \(error)")
-            throw ProviderError.badResponse("He renovado la sesión de Claude Code pero no la he podido guardar. Si Claude Code te pide entrar, haz /login.")
+            throw ProviderError.badResponse(String(localized: "Claude Code's session was renewed but could not be saved. If Claude Code asks you to sign in, run /login."))
         }
         Log.notice("claude: session renewed until \(parsed.expiresAt.map { "\($0)" } ?? "?")")
         return parsed
@@ -248,7 +248,7 @@ public actor ClaudeProvider: UsageProvider {
             }
             switch status {
             case 200..<300:
-                guard let json = try? JSONValue.parse(data) else { throw ProviderError.badResponse("Respuesta de renovación ilegible.") }
+                guard let json = try? JSONValue.parse(data) else { throw ProviderError.badResponse(String(localized: "Unreadable renewal answer.")) }
                 return json
             case 400, 401, 403:
                 let reason = (try? JSONValue.parse(data)).flatMap { $0["error"]?.string ?? $0["error"]?["type"]?.string } ?? "?"
@@ -374,9 +374,9 @@ public actor ClaudeProvider: UsageProvider {
 
         if let extra = object["extra_usage"], extra["is_enabled"]?.bool == true {
             if let used = extra["utilization"]?.double {
-                facts.append(Fact("Uso extra", "\(Fmt.percent(used)) del límite mensual", symbol: "creditcard"))
+                facts.append(Fact(String(localized: "Extra usage"), String(localized: "\(Fmt.percent(used)) of the monthly limit"), symbol: "creditcard"))
             } else {
-                facts.append(Fact("Uso extra", "activado", symbol: "creditcard"))
+                facts.append(Fact(String(localized: "Extra usage"), String(localized: "on"), symbol: "creditcard"))
             }
         }
 
@@ -401,14 +401,14 @@ public actor ClaudeProvider: UsageProvider {
         let fiveHours: TimeInterval = 5 * 3600
         let week: TimeInterval = 7 * 86_400
         switch key {
-        case "five_hour": return ("Sesión · 5 h", .session, fiveHours)
-        case "seven_day": return ("Semana", .weekly, week)
-        case "seven_day_opus": return ("Semana · Opus", .weeklyModel, week)
-        case "seven_day_sonnet": return ("Semana · Sonnet", .weeklyModel, week)
-        case "seven_day_oauth_apps": return ("Semana · apps conectadas", .weeklyModel, week)
+        case "five_hour": return (String(localized: "Session · 5 h"), .session, fiveHours)
+        case "seven_day": return (String(localized: "Week"), .weekly, week)
+        case "seven_day_opus": return (String(localized: "Week · \("Opus")"), .weeklyModel, week)
+        case "seven_day_sonnet": return (String(localized: "Week · \("Sonnet")"), .weeklyModel, week)
+        case "seven_day_oauth_apps": return (String(localized: "Week · connected apps"), .weeklyModel, week)
         default:
             if key.hasPrefix("seven_day_") {
-                return ("Semana · \(humanize(String(key.dropFirst("seven_day_".count))))", .weeklyModel, week)
+                return (String(localized: "Week · \(humanize(String(key.dropFirst("seven_day_".count))))"), .weeklyModel, week)
             }
             if key.hasPrefix("five_hour_") {
                 return ("5 h · \(humanize(String(key.dropFirst("five_hour_".count))))", .other, fiveHours)

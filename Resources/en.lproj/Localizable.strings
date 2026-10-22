@@ -1,0 +1,5 @@
+/* English is the code's own language; only keys that carry a hint for translators need an entry here. */
+
+"today at %@ (one o'clock)" = "today at %@";
+"tomorrow at %@ (one o'clock)" = "tomorrow at %@";
+"on %@ at %@ (one o'clock)" = "on %@ at %@";

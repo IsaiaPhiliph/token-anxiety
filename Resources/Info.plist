@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
-	<string>es</string>
+	<string>en</string>
 	<key>CFBundleDisplayName</key>
 	<string>Token Anxiety</string>
 	<key>CFBundleExecutable</key>
@@ -14,6 +14,11 @@
 	<string>com.tokenanxiety.app</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>es</string>
+	</array>
 	<key>CFBundleName</key>
 	<string>Token Anxiety</string>
 	<key>CFBundlePackageType</key>

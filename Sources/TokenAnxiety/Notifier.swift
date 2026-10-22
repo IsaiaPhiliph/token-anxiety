@@ -73,11 +73,11 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     }
 
     func sendTest() {
-        let window = UsageWindow(id: "test", label: "Semana", kind: .weekly, usedPercent: 80,
+        let window = UsageWindow(id: "test", label: String(localized: "Week"), kind: .weekly, usedPercent: 80,
                                  resetsAt: Date().addingTimeInterval(2 * 86_400))
         post([AlertTracker.Event(provider: .claude, window: window, kind: .threshold(80),
-                                 title: "Token Anxiety: así se ven los avisos",
-                                 body: "Empieza la ansiedad. Se renueva \(Fmt.moment(window.resetsAt!)).")])
+                                 title: String(localized: "Token Anxiety: this is what alerts look like"),
+                                 body: String(localized: "The anxiety begins.") + " " + String(localized: "Resets \(Fmt.moment(window.resetsAt!))."))])
     }
 
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification)
@@ -86,7 +86,7 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     }
 }
 
-/// "Abrir al iniciar sesión", through the system's login items.
+/// "Open at login", through the system's login items.
 enum LoginItem {
     static var status: SMAppService.Status { SMAppService.mainApp.status }
     static var isEnabled: Bool { status == .enabled }

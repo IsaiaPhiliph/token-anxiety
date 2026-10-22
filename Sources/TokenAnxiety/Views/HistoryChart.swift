@@ -19,14 +19,14 @@ struct HistoryChart: View {
                 Chart {
                     ForEach(samples, id: \.date) { sample in
                         if let primary = sample.primary {
-                            AreaMark(x: .value("Hora", sample.date), y: .value(primaryLabel, primary))
+                            AreaMark(x: .value("Time", sample.date), y: .value(primaryLabel, primary))
                                 .foregroundStyle(Color.orange.opacity(0.22))
                                 .interpolationMethod(.monotone)
                         }
                     }
                     ForEach(samples, id: \.date) { sample in
                         if let secondary = sample.secondary {
-                            LineMark(x: .value("Hora", sample.date), y: .value(secondaryLabel, secondary))
+                            LineMark(x: .value("Time", sample.date), y: .value(secondaryLabel, secondary))
                                 .foregroundStyle(Color.accentColor)
                                 .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round))
                                 .interpolationMethod(.monotone)
@@ -39,7 +39,7 @@ struct HistoryChart: View {
                     AxisMarks(position: .trailing, values: [0, 50, 100]) { value in
                         AxisGridLine().foregroundStyle(Color.primary.opacity(0.08))
                         AxisValueLabel {
-                            if let percent = value.as(Int.self) { Text("\(percent)%") }
+                            if let percent = value.as(Int.self) { Text(verbatim: "\(percent)%") }
                         }
                     }
                 }
@@ -57,11 +57,11 @@ struct HistoryChart: View {
                 }
             }
             if daily.contains(where: { $0.value > 0 }) {
-                Text("Tokens por día")
+                Text("Tokens per day")
                     .font(.system(size: 10.5, weight: .medium))
                     .foregroundStyle(.secondary)
                 Chart(daily, id: \.day) { day in
-                    BarMark(x: .value("Día", day.day, unit: .day), y: .value("Tokens", day.value))
+                    BarMark(x: .value("Day", day.day, unit: .day), y: .value("Tokens", day.value))
                         .foregroundStyle(Color.accentColor.gradient)
                         .cornerRadius(3)
                 }
