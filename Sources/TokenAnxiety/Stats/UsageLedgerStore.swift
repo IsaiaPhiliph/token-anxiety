@@ -17,6 +17,10 @@ final class UsageLedgerStore {
     /// In demo mode nothing is read or written.
     init(demo: Bool) {
         indexer = demo ? nil : LedgerIndexer(directory: LedgerIndexer.defaultDirectory)
+        if demo {
+            ledger = Demo.ledger()
+            lastUpdate = Date()
+        }
     }
 
     func update() {

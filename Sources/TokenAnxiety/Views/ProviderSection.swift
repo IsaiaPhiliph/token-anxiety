@@ -11,13 +11,16 @@ struct ProviderSection: View {
     let now: Date
     let retry: () -> Void
     let stale: Bool
+    /// Today's tokens from the local logs (Claude Code, Codex).
+    let today: UsageTotals?
 
     @AppStorage private var showsHistory: Bool
 
     init(id: ProviderID, entry: UsageStore.Entry, settings: AppSettings, history: HistoryLog, now: Date,
-         retry: @escaping () -> Void, stale: Bool = false) {
+         retry: @escaping () -> Void, stale: Bool = false, today: UsageTotals? = nil) {
         self.id = id
         self.stale = stale
+        self.today = today
         self.entry = entry
         self.settings = settings
         self.history = history
@@ -42,7 +45,8 @@ struct ProviderSection: View {
                     }
                     .padding(.top, 2)
                 }
-                if !snapshot.facts.isEmpty { facts(snapshot.facts) }
+                let facts = snapshot.facts + todayFact
+                if !facts.isEmpty { self.facts(facts) }
                 if settings.historyEnabled { historyBlock(snapshot) }
             }
             if let error = entry.error { errorLine(error) }
@@ -189,6 +193,13 @@ struct ProviderSection: View {
     }
 
     // MARK: Facts
+
+    private var todayFact: [Fact] {
+        guard let today, today.counts.requests > 0 else { return [] }
+        let tokens = String(localized: "\(Fmt.tokens(Double(today.counts.total))) tokens")
+        let value = today.cost > 0 ? "\(tokens) · ≈ \(Fmt.money(today.cost))" : tokens
+        return [Fact(String(localized: "Today"), value, symbol: "chart.bar")]
+    }
 
     private func facts(_ facts: [Fact]) -> some View {
         VStack(alignment: .leading, spacing: 5) {

@@ -94,4 +94,82 @@ public enum Demo {
         }
         return log
     }
+
+    /// Four months of local usage: weekday work with evening spikes, a few projects
+    /// and sessions, Claude most days and Codex now and then. The same every time.
+    public static func ledger(now: Date = Date(), calendar: Calendar = .current) -> UsageLedger {
+        var ledger = UsageLedger()
+        var random = SeededRandom(seed: 42)
+        let projects = ["token-anxiety", "web-shop", "ml-notebooks", "api-gateway", "dotfiles", "portfolio"]
+        let weights = [0.34, 0.24, 0.16, 0.13, 0.05, 0.08]
+        let titles = ["Fix the login redirect", "Charts for the stats window", "Refactor the cart", "Write the README",
+                      "Speed up the importer", "Flaky test hunt", "Dark mode polish", "Add the webhooks",
+                      "Migrate to Swift 6", "Profile the build", "Clean up the CSS", "Rate limit the API"]
+        let branches = ["main", "feature/stats", "fix/login", "refactor/cart", "chore/deps"]
+        let today = calendar.startOfDay(for: now)
+        var sessionNumber = 0
+        for offset in stride(from: 119, through: 0, by: -1) {
+            guard let day = calendar.date(byAdding: .day, value: -offset, to: today) else { continue }
+            let weekday = calendar.component(.weekday, from: day)
+            let weekend = weekday == 1 || weekday == 7
+            // A few days off, more of them at weekends.
+            if random.next() < (weekend ? 0.45 : 0.08) { continue }
+            let sessions = weekend ? 1 + Int(random.next() * 2) : 2 + Int(random.next() * 4)
+            for _ in 0..<sessions {
+                sessionNumber += 1
+                let codex = random.next() < 0.18
+                let project = pick(projects, weights, random.next())
+                let startHour = [9, 10, 11, 12, 15, 16, 17, 18, 21, 22, 23][Int(random.next() * 11)]
+                var date = day.addingTimeInterval(Double(startHour) * 3600 + random.next() * 3000)
+                guard date < now else { continue }
+                let session = "demo-\(sessionNumber)"
+                let branch = branches[Int(random.next() * Double(branches.count))]
+                let effort = ["medium", "high", "xhigh", "max"][Int(random.next() * 4)]
+                let model = codex ? "gpt-5.5" : pick(["claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5"],
+                                                     [0.72, 0.2, 0.08], random.next())
+                let requests = 15 + Int(random.next() * 160)
+                var context = 30_000 + random.next() * 40_000
+                for request in 0..<requests where date < now {
+                    let grow = 2_000 + random.next() * 6_000
+                    context = context > 600_000 ? 40_000 : context + grow
+                    let counts = codex
+                        ? TokenCounts(input: Int(grow), output: 300 + Int(random.next() * 1_500), cacheRead: Int(context),
+                                      reasoning: Int(random.next() * 400), requests: 1)
+                        : TokenCounts(input: 6, output: 200 + Int(random.next() * 2_400), cacheWrite5m: Int(grow),
+                                      cacheRead: Int(context), requests: 1, webSearches: random.next() < 0.02 ? 1 : 0)
+                    let agent = !codex && request > 10 && random.next() < 0.12 ? "agent-\(request % 3)" : nil
+                    ledger.add(UsageEvent(provider: codex ? .codex : .claude, date: date, session: session, project: project,
+                                          branch: codex ? nil : branch, model: model, effort: effort, agent: agent,
+                                          entrypoint: codex ? nil : ["claude-desktop", "claude-vscode", "cli"][sessionNumber % 3],
+                                          counts: counts))
+                    date = date.addingTimeInterval(20 + random.next() * 70)
+                }
+                ledger.setTitle(titles[sessionNumber % titles.count], provider: codex ? .codex : .claude,
+                                session: session, custom: true)
+            }
+        }
+        return ledger
+    }
+
+    private static func pick<T>(_ items: [T], _ weights: [Double], _ roll: Double) -> T {
+        var total = 0.0
+        for (item, weight) in zip(items, weights) {
+            total += weight
+            if roll < total { return item }
+        }
+        return items[items.count - 1]
+    }
+}
+
+/// A small deterministic generator, so the demo looks the same on every launch.
+struct SeededRandom {
+    private var state: UInt64
+
+    init(seed: UInt64) { state = seed &+ 0x9E37_79B9_7F4A_7C15 }
+
+    /// 0 ..< 1
+    mutating func next() -> Double {
+        state = state &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
+        return Double(state >> 11) / Double(1 << 53)
+    }
 }

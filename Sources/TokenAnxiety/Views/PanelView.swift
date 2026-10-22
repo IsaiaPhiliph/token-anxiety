@@ -34,13 +34,19 @@ struct PanelView: View {
                     }
                     ProviderSection(id: id, entry: store.entries[id] ?? .init(), settings: settings,
                                     history: store.history, now: now, retry: actions.refresh,
-                                    stale: store.isStale(id, now: now))
+                                    stale: store.isStale(id, now: now), today: today(id, now: now))
                 }
             }
             footer(now: now)
                 .padding(.top, 16)
         }
         .padding(16)
+    }
+
+    private func today(_ id: ProviderID, now: Date) -> UsageTotals? {
+        guard id == .claude || id == .codex else { return nil }
+        let start = Fmt.calendar.startOfDay(for: now)
+        return store.usage.ledger.totals(in: DateInterval(start: start, end: max(now, start)), provider: id)
     }
 
     private var header: some View {
@@ -60,6 +66,11 @@ struct PanelView: View {
             Spacer(minLength: 8)
             GlassEffectContainer(spacing: 8) {
                 HStack(spacing: 8) {
+                    Button(action: actions.openStats) {
+                        Image(systemName: "chart.bar.xaxis")
+                            .frame(width: 18, height: 18)
+                    }
+                    .help("Statistics")
                     Button(action: actions.refresh) {
                         Image(systemName: "arrow.clockwise")
                             .symbolEffect(.rotate, options: .repeat(.continuous), isActive: store.isRefreshing)

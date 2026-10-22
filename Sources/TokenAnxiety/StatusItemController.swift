@@ -11,14 +11,17 @@ final class StatusItemController: NSObject {
     private let settings: AppSettings
     private let panel: PanelController
     private let openSettings: () -> Void
+    private let openStats: () -> Void
     private var appearanceObservation: NSKeyValueObservation?
     private var lastRender: ([MenuBarRenderer.Item], MenuBarRenderer.Options)?
 
-    init(store: UsageStore, settings: AppSettings, panel: PanelController, openSettings: @escaping () -> Void) {
+    init(store: UsageStore, settings: AppSettings, panel: PanelController, openSettings: @escaping () -> Void,
+         openStats: @escaping () -> Void) {
         self.store = store
         self.settings = settings
         self.panel = panel
         self.openSettings = openSettings
+        self.openStats = openStats
         super.init()
 
         statusItem.autosaveName = "TokenAnxiety"
@@ -86,6 +89,7 @@ final class StatusItemController: NSObject {
         panel.close()
         let menu = NSMenu()
         menu.addItem(withTitle: String(localized: "Refresh now"), action: #selector(refreshNow), keyEquivalent: "r").target = self
+        menu.addItem(withTitle: String(localized: "Statistics…"), action: #selector(showStats), keyEquivalent: "s").target = self
         menu.addItem(withTitle: String(localized: "Settings…"), action: #selector(showSettings), keyEquivalent: ",").target = self
         menu.addItem(.separator())
         menu.addItem(withTitle: String(localized: "Quit Token Anxiety"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
@@ -98,5 +102,9 @@ final class StatusItemController: NSObject {
 
     @objc private func showSettings() {
         openSettings()
+    }
+
+    @objc private func showStats() {
+        openStats()
     }
 }

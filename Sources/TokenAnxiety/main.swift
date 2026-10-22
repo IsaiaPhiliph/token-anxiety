@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var panel: PanelController!
     private var statusItem: StatusItemController!
     private var settingsWindow: NSWindow?
+    private var stats: StatsWindowController?
 
     private let arguments = CommandLine.arguments
 
@@ -18,8 +19,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         notifier = Notifier()
         notifier.setUp()
         store = UsageStore(settings: settings, notifier: notifier, demo: arguments.contains("--demo"))
-        panel = PanelController(store: store, settings: settings) { [weak self] in self?.showSettings() }
-        statusItem = StatusItemController(store: store, settings: settings, panel: panel) { [weak self] in self?.showSettings() }
+        panel = PanelController(store: store, settings: settings, openSettings: { [weak self] in self?.showSettings() },
+                                openStats: { [weak self] in self?.showStats() })
+        statusItem = StatusItemController(store: store, settings: settings, panel: panel,
+                                          openSettings: { [weak self] in self?.showSettings() },
+                                          openStats: { [weak self] in self?.showStats() })
         store.start()
         if settings.notificationsEnabled { notifier.requestAuthorization() }
         LoginItem.enableOnFirstLaunchFromApplications()
@@ -31,6 +35,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         if arguments.contains("--open-settings") { showSettings() }
+        if let index = arguments.firstIndex(of: "--open-stats") {
+            // An optional section to start on, for screenshots: `--open-stats hours`.
+            let section = arguments.indices.contains(index + 1) ? StatsSection(rawValue: arguments[index + 1]) : nil
+            showStats(section: section)
+        }
+    }
+
+    func showStats(section: StatsSection? = nil) {
+        if stats == nil { stats = StatsWindowController(store: store) }
+        stats?.show(section: section)
     }
 
     func showSettings() {

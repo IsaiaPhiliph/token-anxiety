@@ -7,6 +7,7 @@ import TokenAnxietyCore
 struct PanelActions {
     var refresh: () -> Void
     var openSettings: () -> Void
+    var openStats: () -> Void
     var quit: () -> Void
     var resize: (CGFloat) -> Void
 }
@@ -21,16 +22,18 @@ final class PanelController {
     private let store: UsageStore
     private let settings: AppSettings
     private let openSettings: () -> Void
+    private let openStats: () -> Void
     private var panel: GlassPanel?
     private var contentHeight: CGFloat = 420
     private weak var anchor: NSStatusBarButton?
     private var monitors: [Any] = []
     private var shownAt = Date.distantPast
 
-    init(store: UsageStore, settings: AppSettings, openSettings: @escaping () -> Void) {
+    init(store: UsageStore, settings: AppSettings, openSettings: @escaping () -> Void, openStats: @escaping () -> Void) {
         self.store = store
         self.settings = settings
         self.openSettings = openSettings
+        self.openStats = openStats
     }
 
     var isVisible: Bool { panel?.isVisible == true }
@@ -78,6 +81,10 @@ final class PanelController {
             openSettings: { [weak self] in
                 self?.close()
                 self?.openSettings()
+            },
+            openStats: { [weak self] in
+                self?.close()
+                self?.openStats()
             },
             quit: { NSApp.terminate(nil) },
             resize: { [weak self] height in self?.contentHeightChanged(height) }

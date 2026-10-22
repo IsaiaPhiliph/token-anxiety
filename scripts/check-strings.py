@@ -13,7 +13,7 @@ import re
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-CALL = re.compile(r'(?:String\(localized:|Text\(|Toggle\(|Button\(|Section\(|Label\(|LabeledContent\(|Picker\(|\.help\(|\.value\()\s*"')
+CALL = re.compile(r'(?:String\(localized:|Text\(|Toggle\(|Button\(|Section\(|Label\(|LabeledContent\(|Picker\(|TableColumn\(|TextField\(|\.help\(|\.value\()\s*"')
 
 
 def literal_at(source, start):

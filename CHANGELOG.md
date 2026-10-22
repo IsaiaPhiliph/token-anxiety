@@ -6,6 +6,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ### Added
 
+- A Statistics window (from the panel or the right-click menu): tokens and API-equivalent cost by day, hour, weekday, project, model, effort and session, a year of activity, streaks, and what your plan's current week would cost through the API. The panel shows today's tokens under Claude and Codex.
 - A local usage history: tokens, an API-equivalent cost estimate, projects, models and sessions read from Claude Code's and Codex's own logs, kept by the app so it outlives their cleanup. `--print --stats` prints it.
 - When Codex cannot be reached, its quota comes from the windows it last wrote in its logs.
 - English, alongside Spanish: the app follows the Mac's language, and dates and numbers its region.
